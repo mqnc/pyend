@@ -31,7 +31,7 @@ def fmt(src, check = True, debug = False):
 		sum += len(line)
 		lineOffsets.append(sum)
 
-	tokens = tokenize.generate_tokens(io.StringIO(srcString).readline)
+	tokens = list(tokenize.generate_tokens(io.StringIO(srcString).readline))
 
 	# collect white space info between tokens
 	class WhiteSpace:
@@ -126,8 +126,14 @@ def fmt(src, check = True, debug = False):
 				stringsAndComments.append(t.string)
 			elif t.type == tokenize.INDENT:
 				ostream.append(blockIndent)
+				ostream.append("\t")
 				indentLevel += 1
 			elif t.type == tokenize.DEDENT:
+				k = -1
+				while ostream[k] == blockDedent:
+					k -= 1
+				if len(ostream[k]) > 0 and ostream[k][-1] == "\t":
+					ostream[k] = ostream[k][:-1]
 				ostream.append(blockDedent)
 				indentLevel -= 1
 			elif t.type == tokenize.OP and t.string in "([{":
@@ -191,15 +197,11 @@ def fmt(src, check = True, debug = False):
 				else:
 					ostream.append(" ")
 
+	print(ostream)
 	interRep = "".join(ostream)
+	print(interRep)
 
 	# corrections
-
-	# also indent the line where the indent marker appears (marker affects only following lines)
-	interRep = interRep.replace(blockIndent, blockIndent + "\t")
-
-	# also dedent the line where the dedent marker appears (marker affects only following lines)
-	interRep = interRep.replace("\t" + blockDedent, blockDedent)
 
 	# remove 1 tab where the line starts with a closing bracket
 	interRep = re.sub(r"\t([\)\]}])", r"\1", interRep)
@@ -232,7 +234,8 @@ def fmt(src, check = True, debug = False):
 	interRep = "\n".join(lines)
 
 	# remove indentation markers
-	interRep = re.sub("[" + blockIndent + blockDedent + "]", "", interRep)
+	if not debug:
+		interRep = re.sub("[" + blockIndent + blockDedent + "]", "", interRep)
 
 	# put strings and comments back
 	interRep = interRep.replace("%s", escape)
@@ -240,13 +243,14 @@ def fmt(src, check = True, debug = False):
 	interRep = interRep % tuple(stringsAndComments)
 	interRep = interRep.replace(escape, "%s")
 
-	if check:
-		compareTokens = tokenize.generate_tokens(io.StringIO(interRep).readline)
+	if check and not debug:
+		compareTokens = list(tokenize.generate_tokens(io.StringIO(interRep).readline))
 		for t1, t2 in zip(tokens, compareTokens):
 			assert t1.type == t2.type
 			assert t1.string == t2.string
+		assert len(tokens) == len(compareTokens)
 
 	if debug:
-		interRep = interRep.replace("\t", "⊢--⊣").replace(" ", "⎵")
+		interRep = interRep.replace("\t", "⊢−−⊣").replace(" ", "⎵")
 
 	return interRep
