@@ -3,7 +3,7 @@ import io
 import re
 import keyword
 
-def fmt(src, debug = False):
+def fmt(src, check = True, debug = False):
 
 	if debug:
 		blockIndent = "␎"
@@ -115,6 +115,7 @@ def fmt(src, debug = False):
 	stringsAndComments = []
 	indentLevel = 0
 	bracketLevel = 0
+	lastToken = WhiteSpace(None)
 
 	for i, t in enumerate(tokensAndWhitespaces):
 		if type(t) == tokenize.TokenInfo:
@@ -142,8 +143,17 @@ def fmt(src, debug = False):
 			elif t.type == tokenize.NEWLINE or t.type == tokenize.NL:
 				ostream.append("\n")
 				ostream.append("\t" * indentLevel)
+			elif t.type == tokenize.OP and t.string in ["+", "-"]:
+				if lastToken.string in ["True", "False", "None", ")", "]", "}", "..."] \
+						or lastToken.type in [tokenize.NAME, tokenize.NUMBER, tokenize.STRING]:
+					t.isInfix = True # sue me
+				else:
+					t.isInfix = False
+				ostream.append(t.string)
 			else:
 				ostream.append(t.string)
+
+			lastToken = t
 		elif type(t) == WhiteSpace:
 			if t.string == "\\\n":
 				ostream.append(t.string)
@@ -162,7 +172,7 @@ def fmt(src, debug = False):
 
 				noSpaceAround = [tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL, tokenize.ENDMARKER]
 
-				if len(prv.string) > 0 and prv.string[-1] in ["(", "[", "{", ".", "\t", "\n"] \
+				if len(prv.string) > 0 and prv.string[-1] in ["(", "[", "{", ".", "~", "\t", "\n"] \
 						or prv.string == "**" \
 						or prv.type in noSpaceAround:
 					pass
@@ -175,6 +185,8 @@ def fmt(src, debug = False):
 					and prv.string not in keyword.kwlist
 					and nxt.string in ["(", "["]
 				):
+					pass
+				elif prv.type == tokenize.OP and prv.string in ["+", "-"] and prv.isInfix is False:
 					pass
 				else:
 					ostream.append(" ")
@@ -228,15 +240,13 @@ def fmt(src, debug = False):
 	interRep = interRep % tuple(stringsAndComments)
 	interRep = interRep.replace(escape, "%s")
 
+	if check:
+		compareTokens = tokenize.generate_tokens(io.StringIO(interRep).readline)
+		for t1, t2 in zip(tokens, compareTokens):
+			assert t1.type == t2.type
+			assert t1.string == t2.string
+
 	if debug:
 		interRep = interRep.replace("\t", "⊢--⊣").replace(" ", "⎵")
 
 	return interRep
-
-
-# print(fmt("""
-# 1
-
-# if True:
-# 	2
-# """))

@@ -1,3 +1,4 @@
+
 from pyend import fmt
 
 if 1 \
@@ -36,6 +37,9 @@ x = [
 x = [[
 	1
 ]]
+
+x = +1
+x = 1 + 1
 
 with open(__file__) as me:
 	src = me.read()
