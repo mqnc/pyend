@@ -248,7 +248,14 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 				while j > 0 and len(lines[j]) == 0:
 					j-=1
 				indents = countTabs(lines[i])
-				for k in range(indents + dedents-1, indents-1, -1):
+
+				if lines[i].count(blockDedent + "elif ") > 0 or \
+						lines[i].count(blockDedent + "else:") > 0:
+					upto = indents
+				else:
+					upto = indents - 1
+
+				for k in range(indents + dedents-1, upto, -1):
 					lines[j] += "\n" + "\t" * k + blockEndMarker
 
 	interRep = "\n".join(lines)
