@@ -42,7 +42,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 	class WhiteSpace:
 		def __init__(self, string):
 			self.string = string
-			self.type = None
+			self.type = WhiteSpace
 
 		def __str__(self):
 			return 'WhiteSpace(' + repr(self.string) + ')'
@@ -115,7 +115,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 			coalesce[t] = True
 			coalesce[corresponding[t]] = True
 
-	# initial indentation and white space pass
+	# main indentation and white space pass
 	ostream = []
 	stringsAndComments = []
 	indentLevel = 0
@@ -135,13 +135,36 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 				ostream.append("\t")
 				indentLevel += 1
 			elif t.type == tokenize.DEDENT:
+				indentLevel -= 1
+
+				# remove one tab
 				k = -1
 				while ostream[k] == blockDedent:
 					k -= 1
 				if len(ostream[k]) > 0 and ostream[k][-1] == "\t":
 					ostream[k] = ostream[k][:-1]
+
+				# insert block end marker
+				if blockEndMarker is not None:
+					# find next meaningful token and pass if it is already an implicit block end marker
+					j = i+1
+					while j < len(tokensAndWhitespaces) and tokensAndWhitespaces[j].type in [
+						WhiteSpace, tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.COMMENT
+					]:
+						j += 1
+					if tokensAndWhitespaces[j].string in ["elif", "else", "catch", "finally"]:
+						pass
+					else:
+						k = len(ostream)
+						while (
+							len(ostream[k-1]) == 0
+							or ostream[k-1] in [blockDedent, "\n"]
+							or ostream[k-1].count("\t") == len(ostream[k-1])
+						):
+							k -= 1
+						ostream.insert(k, "\n" + "\t" * indentLevel + blockEndMarker)
+
 				ostream.append(blockDedent)
-				indentLevel -= 1
 			elif t.type == tokenize.OP and t.string in "([{":
 				ostream.append(t.string)
 				bracketLevel += 1
@@ -184,7 +207,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 
 				noSpaceAround = [tokenize.INDENT, tokenize.DEDENT, tokenize.NEWLINE, tokenize.NL, tokenize.ENDMARKER]
 
-				if len(prv.string) > 0 and prv.string[-1] in ["(", "[", "{", ".", "~", "\t", "\n"] \
+				if len(prv.string) > 0 and prv.string[-1] in ["(", "[", "{", ".", ":", "~", "\t", "\n"] \
 						or prv.string == "**" \
 						or prv.type in noSpaceAround:
 					pass
@@ -238,25 +261,6 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 				while j > 0 and countTabs(lines[j]) >= tabs:
 					lines[j] = "\t" + lines[j]
 					j -= 1
-
-	# insert block end markers
-	if blockEndMarker is not None:
-		for i in reversed(range(len(lines))):
-			dedents = lines[i].count(blockDedent)
-			if dedents > 0:
-				j = i-1
-				while j > 0 and len(lines[j]) == 0:
-					j-=1
-				indents = countTabs(lines[i])
-
-				if lines[i].count(blockDedent + "elif ") > 0 or \
-						lines[i].count(blockDedent + "else:") > 0:
-					upto = indents
-				else:
-					upto = indents - 1
-
-				for k in range(indents + dedents-1, upto, -1):
-					lines[j] += "\n" + "\t" * k + blockEndMarker
 
 	interRep = "\n".join(lines)
 
