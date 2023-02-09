@@ -3,7 +3,9 @@ import io
 import re
 import keyword
 
-def fmt(src, check = True, debug = False):
+end = None
+
+def fmt(src, blockEndMarker = None, check = True, debug = False):
 
 	if debug:
 		blockIndent = "␎"
@@ -22,6 +24,9 @@ def fmt(src, check = True, debug = False):
 		srcString = src.decode(encoding)
 	else:
 		srcString = src
+
+	if srcString[-1] != "\n":
+		srcString += "\n"
 
 	# for converting (line, column) to char index
 	lines = io.StringIO(srcString).readlines() + [""]
@@ -116,6 +121,7 @@ def fmt(src, check = True, debug = False):
 	indentLevel = 0
 	bracketLevel = 0
 	lastToken = WhiteSpace(None)
+	isInfix = {}
 
 	for i, t in enumerate(tokensAndWhitespaces):
 		if type(t) == tokenize.TokenInfo:
@@ -152,9 +158,9 @@ def fmt(src, check = True, debug = False):
 			elif t.type == tokenize.OP and t.string in ["+", "-"]:
 				if lastToken.string in ["True", "False", "None", ")", "]", "}", "..."] \
 						or lastToken.type in [tokenize.NAME, tokenize.NUMBER, tokenize.STRING]:
-					t.isInfix = True # sue me
+					isInfix[t] = True
 				else:
-					t.isInfix = False
+					isInfix[t] = False
 				ostream.append(t.string)
 			else:
 				ostream.append(t.string)
@@ -192,14 +198,15 @@ def fmt(src, check = True, debug = False):
 					and nxt.string in ["(", "["]
 				):
 					pass
-				elif prv.type == tokenize.OP and prv.string in ["+", "-"] and prv.isInfix is False:
+				elif prv.type == tokenize.OP and prv.string in ["+", "-"] and isInfix[prv] is False:
 					pass
 				else:
 					ostream.append(" ")
 
-	print(ostream)
 	interRep = "".join(ostream)
-	print(interRep)
+	if debug:
+		print(ostream)
+		print(interRep)
 
 	# corrections
 
@@ -222,14 +229,27 @@ def fmt(src, check = True, debug = False):
 		return n
 
 	lines = interRep.split("\n")
-	for i in range(1, len(lines)):
-		if len(lines[i]) > 0 and lines[i][0] == blockIndent:
-			tabs = countTabs(lines[i])
+
+	for i, line in enumerate(lines):
+		if len(line) > 0 and line[0] == blockIndent:
+			tabs = countTabs(line)
 			if countTabs(lines[i-1]) == tabs:
 				j = i-1
 				while j > 0 and countTabs(lines[j]) >= tabs:
 					lines[j] = "\t" + lines[j]
 					j -= 1
+
+	# insert block end markers
+	if blockEndMarker is not None:
+		for i in reversed(range(len(lines))):
+			dedents = lines[i].count(blockDedent)
+			if dedents > 0:
+				j = i-1
+				while j > 0 and len(lines[j]) == 0:
+					j-=1
+				indents = countTabs(lines[i])
+				for k in range(indents + dedents-1, indents-1, -1):
+					lines[j] += "\n" + "\t" * k + blockEndMarker
 
 	interRep = "\n".join(lines)
 
