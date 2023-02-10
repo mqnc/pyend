@@ -122,11 +122,23 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 	bracketLevel = 0
 	lastToken = WhiteSpace(None)
 	isInfix = {}
+	blockStarts = ["class", "def", "if", "elif", "else",
+		"while", "for", "with", "try", "except", "finally", "match", "case"]
+	blockStack = []
 
 	for i, t in enumerate(tokensAndWhitespaces):
 		if type(t) == tokenize.TokenInfo:
 			if t.type == tokenize.ENCODING:
 				pass
+			elif t.type == tokenize.NAME and t.string in blockStarts:
+				j = i-1
+				while j>0 and tokensAndWhitespaces[j].type in \
+						[WhiteSpace, tokenize.INDENT, tokenize.DEDENT, tokenize.NL]:
+					j -= 1
+				if tokensAndWhitespaces[j].type in [tokenize.NEWLINE, tokenize.ENCODING]:
+					blockStack.append(t.string)
+
+				ostream.append(t.string)
 			elif t.type == tokenize.COMMENT or t.type == tokenize.STRING:
 				ostream.append(substitute)
 				stringsAndComments.append(t.string)
@@ -154,6 +166,8 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 						j += 1
 					if tokensAndWhitespaces[j].string in ["elif", "else", "catch", "finally"]:
 						pass
+					elif len(blockStack) > 0 and blockStack[-1] == "case":
+						pass
 					else:
 						k = len(ostream)
 						while (
@@ -163,6 +177,8 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 						):
 							k -= 1
 						ostream.insert(k, "\n" + "\t" * indentLevel + blockEndMarker)
+
+				blockStack.pop()
 
 				ostream.append(blockDedent)
 			elif t.type == tokenize.OP and t.string in "([{":
