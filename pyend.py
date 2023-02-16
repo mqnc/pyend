@@ -5,7 +5,9 @@ import keyword
 
 end = None
 
-def fmt(src, blockEndMarker = None, check = True, debug = False):
+def fmt(src, check = True, debug = False):
+
+	blockEndMarker = "end"
 
 	if debug:
 		blockIndent = "␎"
@@ -28,6 +30,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 	if srcString[-1] != "\n":
 		srcString += "\n"
 
+
 	# for converting (line, column) to char index
 	lines = io.StringIO(srcString).readlines() + [""]
 	lineOffsets = [0, 0]
@@ -38,6 +41,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 
 	tokens = list(tokenize.generate_tokens(io.StringIO(srcString).readline))
 
+
 	# collect white space info between tokens
 	class WhiteSpace:
 		def __init__(self, string):
@@ -45,7 +49,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 			self.type = WhiteSpace
 
 		def __str__(self):
-			return 'WhiteSpace(' + repr(self.string) + ')'
+			return "WhiteSpace(" + repr(self.string) + ")"
 
 	tokensAndWhitespaces = []
 
@@ -133,7 +137,7 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 			elif t.type == tokenize.NAME and t.string in blockStarts:
 				j = i-1
 				while j>0 and tokensAndWhitespaces[j].type in \
-						[WhiteSpace, tokenize.INDENT, tokenize.DEDENT, tokenize.NL]:
+						[WhiteSpace, tokenize.INDENT, tokenize.DEDENT, tokenize.NL, tokenize.COMMENT]:
 					j -= 1
 				if tokensAndWhitespaces[j].type in [tokenize.NEWLINE, tokenize.ENCODING]:
 					blockStack.append(t.string)
@@ -285,10 +289,10 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 		interRep = re.sub("[" + blockIndent + blockDedent + "]", "", interRep)
 
 	# put strings and comments back
-	interRep = interRep.replace("%s", escape)
+	interRep = interRep.replace("%", escape)
 	interRep = interRep.replace(substitute, "%s")
 	interRep = interRep % tuple(stringsAndComments)
-	interRep = interRep.replace(escape, "%s")
+	interRep = interRep.replace(escape, "%")
 
 	if check and not debug:
 		compareTokens = list(tokenize.generate_tokens(io.StringIO(interRep).readline))
@@ -301,3 +305,28 @@ def fmt(src, blockEndMarker = None, check = True, debug = False):
 		interRep = interRep.replace("\t", "⊢−−⊣").replace(" ", "⎵")
 
 	return interRep
+
+
+if __name__ == "__main__":
+	import argparse
+	parser = argparse.ArgumentParser( prog = "pyend",
+        description = "format python files and insert block end markers")
+
+	parser.add_argument("filename")
+	parser.add_argument("-d", "--debug", action="store_true")
+	parser.add_argument("-o", "--out")
+
+	args = parser.parse_args()
+
+	with open(args.filename) as inFile:
+		src = inFile.read()
+
+	if args.out is not None:
+		out = args.out
+	elif args.debug:
+		out = args.filename + ".fmt.dbg"
+	else:
+		out = args.filename
+
+	with open(out, "w") as outFile:
+		outFile.write(fmt(src, blockEndMarker = "end", debug = args.debug, check = False))
