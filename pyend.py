@@ -139,16 +139,21 @@ def fmt(src, check = True, debug = False):
 				ostream.append(blockIndent)
 				ostream.append("\t")
 				indentLevel += 1
-				# find the token that caused this indent: the first NAME after the last NEWLINE
+				# find the token that caused this indent: the first NAME after the last but one NEWLINE
 				j = i
+				while j>0 and tokensAndWhitespaces[j].type != tokenize.NEWLINE:
+					j -= 1
+				j -= 1
 				while j>0 and tokensAndWhitespaces[j].type != tokenize.NEWLINE:
 					j -= 1
 				while j<i and tokensAndWhitespaces[j].type != tokenize.NAME:
 					j += 1
 				if j == i:
 					blockStack.append(None)
+					print(blockStack)
 				else:
-					blockStack.append(tokensAndWhitespaces[j].type)
+					blockStack.append(tokensAndWhitespaces[j].string)
+					print(blockStack)
 			elif t.type == tokenize.DEDENT:
 				indentLevel -= 1
 
@@ -182,6 +187,7 @@ def fmt(src, check = True, debug = False):
 						ostream.insert(k, "\n" + "\t" * indentLevel + blockEndMarker)
 
 				blockStack.pop()
+				print(blockStack)
 
 				ostream.append(blockDedent)
 			elif t.type == tokenize.OP and t.string in "([{":
