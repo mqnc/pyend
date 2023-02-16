@@ -67,7 +67,7 @@ def htmlize(src):
 
 	ostream = ["<div style='font-family:monospace'>"]
 	for t in tokensAndWhitespaces:
-		snip = t.string.replace("\t", "⊢−−⊣").replace(" ", "⎵").replace("\n", "↲<br>")
+		snip = html.escape(t.string.replace("\t", "⊢−−⊣").replace(" ", "⎵")).replace("\n", "↲<br>")
 		if snip == "":
 			snip=" "
 		if t.type == WhiteSpace:

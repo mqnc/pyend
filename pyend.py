@@ -126,23 +126,12 @@ def fmt(src, check = True, debug = False):
 	bracketLevel = 0
 	lastToken = WhiteSpace(None)
 	isInfix = {}
-	blockStarts = ["class", "def", "if", "elif", "else",
-		"while", "for", "with", "try", "except", "finally", "match", "case"]
 	blockStack = []
 
 	for i, t in enumerate(tokensAndWhitespaces):
 		if type(t) == tokenize.TokenInfo:
 			if t.type == tokenize.ENCODING:
 				pass
-			elif t.type == tokenize.NAME and t.string in blockStarts:
-				j = i-1
-				while j>0 and tokensAndWhitespaces[j].type in \
-						[WhiteSpace, tokenize.INDENT, tokenize.DEDENT, tokenize.NL, tokenize.COMMENT]:
-					j -= 1
-				if tokensAndWhitespaces[j].type in [tokenize.NEWLINE, tokenize.ENCODING]:
-					blockStack.append(t.string)
-
-				ostream.append(t.string)
 			elif t.type == tokenize.COMMENT or t.type == tokenize.STRING:
 				ostream.append(substitute)
 				stringsAndComments.append(t.string)
@@ -150,6 +139,16 @@ def fmt(src, check = True, debug = False):
 				ostream.append(blockIndent)
 				ostream.append("\t")
 				indentLevel += 1
+				# find the token that caused this indent: the first NAME after the last NEWLINE
+				j = i
+				while j>0 and tokensAndWhitespaces[j].type != tokenize.NEWLINE:
+					j -= 1
+				while j<i and tokensAndWhitespaces[j].type != tokenize.NAME:
+					j += 1
+				if j == i:
+					blockStack.append(None)
+				else:
+					blockStack.append(tokensAndWhitespaces[j].type)
 			elif t.type == tokenize.DEDENT:
 				indentLevel -= 1
 
