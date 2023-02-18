@@ -69,7 +69,7 @@ def htmlize(src):
 	for t in tokensAndWhitespaces:
 		snip = html.escape(t.string.replace("\t", "⊢−−⊣").replace(" ", "⎵")).replace("\n", "↲<br>")
 		if snip == "":
-			snip=" "
+			snip="&middot;"
 		if t.type == WhiteSpace:
 			typ = "WhiteSpace"
 		else:

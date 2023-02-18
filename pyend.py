@@ -7,18 +7,21 @@ end = None
 
 def fmt(src, check = True, debug = False):
 
-	blockEndMarker = "end"
+	blockEndMarker = "end" # has to be a NAME to work
+	# (will otherwise not be categorized as implicit block-end-marker when formatting already formatted code)
 
 	if debug:
-		blockIndent = "␎"
-		blockDedent = "␏"
-		substitute = "␚"
+# test
+		blockIndent = "⟩"
+		blockDedent = "⟨"
 		escape = "␛"
 	else:
 		blockIndent = "\N{SHIFT IN}"
 		blockDedent = "\N{SHIFT OUT}"
-		substitute = "\N{SUBSTITUTE}"
 		escape = "\N{ESCAPE}"
+
+	subsString = '"string"'
+	subsComment = '# comment'
 
 	# convert to string
 	if type(src) == bytes:
@@ -76,21 +79,44 @@ def fmt(src, check = True, debug = False):
 		for t in tokensAndWhitespaces:
 			print(t)
 
-	# find where multiple opening and corresponding closing brackets are on the same line
-	# so we can coalesce them (indent the code in between only once)
+	# a normal dict fails if identical tokens appear (eg two dedents in the same position)
+	class AddressDict:
+		def __init__(self):
+			self.dict = {}
+		def __contains__(self, key):
+			return id(key) in self.dict
+		def __getitem__(self, key):
+			return self.dict[id(key)][1]
+		def __setitem__(self, key, value):
+			self.dict[id(key)] = (key, value)
+
+
+	# collect info about corresponding opening and closing brackets
+	# as well as indents and dedents
 	bracketStack = [None]
-	corresponding = {}
-	outer = {}
-	coalesce = {}
+	indentStack = [None]
+	corresponding = AddressDict()
+	outer = AddressDict()
 
 	for t in tokensAndWhitespaces:
 		if type(t) == tokenize.TokenInfo:
 			if t.type == tokenize.OP and t.string in "([{":
 				outer[t] = bracketStack[-1]
+				corresponding[t] = None # will be overwritten if the corresponding bracket is found
 				bracketStack.append(t)
 			elif t.type == tokenize.OP and t.string in "}])":
 				if len(bracketStack) > 1:
 					corresponding[t] = bracketStack.pop()
+					corresponding[corresponding[t]] = t
+				else:
+					corresponding[t] = None
+			elif t.type == tokenize.INDENT:
+				outer[t] = indentStack[-1]
+				corresponding[t] = None # will be overwritten if the corresponding dedent is found
+				indentStack.append(t)
+			elif t.type == tokenize.DEDENT:
+				if len(indentStack) > 1:
+					corresponding[t] = indentStack.pop()
 					corresponding[corresponding[t]] = t
 				else:
 					corresponding[t] = None
@@ -104,6 +130,10 @@ def fmt(src, check = True, debug = False):
 			elif t.type == tokenize.OP and t.string in "([{":
 				if len(bracketStack) > 1:
 					bracketStack.pop()
+
+	# find where multiple opening and corresponding closing brackets are on the same line
+	# so we can coalesce them (indent the code in between only once)
+	coalesce = AddressDict()
 
 	for t in tokensAndWhitespaces:
 		if (
@@ -119,25 +149,36 @@ def fmt(src, check = True, debug = False):
 			coalesce[t] = True
 			coalesce[corresponding[t]] = True
 
+	class Value:
+		def __init__(self, fromToken, string):
+			self.fromToken = fromToken
+			self.string = string
+
+		def __repr__(self):
+			return f"'{self.string}' ({self.fromToken})"
+
 	# main indentation and white space pass
 	ostream = []
 	stringsAndComments = []
 	indentLevel = 0
 	bracketLevel = 0
 	lastToken = WhiteSpace(None)
-	isInfix = {}
+	isInfix = AddressDict()
 	blockStack = []
 
 	for i, t in enumerate(tokensAndWhitespaces):
 		if type(t) == tokenize.TokenInfo:
 			if t.type == tokenize.ENCODING:
 				pass
-			elif t.type == tokenize.COMMENT or t.type == tokenize.STRING:
-				ostream.append(substitute)
+			elif t.type == tokenize.STRING:
+				ostream.append(Value(t, subsString))
+				stringsAndComments.append(t.string)
+			elif t.type == tokenize.COMMENT:
+				ostream.append(Value(t, subsComment))
 				stringsAndComments.append(t.string)
 			elif t.type == tokenize.INDENT:
-				ostream.append(blockIndent)
-				ostream.append("\t")
+				ostream.append(Value(t, blockIndent))
+				ostream.append(Value(t, "\t"))
 				indentLevel += 1
 				# find the token that caused this indent: the first NAME after the last but one NEWLINE
 				j = i
@@ -150,19 +191,17 @@ def fmt(src, check = True, debug = False):
 					j += 1
 				if j == i:
 					blockStack.append(None)
-					print(blockStack)
 				else:
 					blockStack.append(tokensAndWhitespaces[j].string)
-					print(blockStack)
 			elif t.type == tokenize.DEDENT:
 				indentLevel -= 1
 
 				# remove one tab
 				k = -1
-				while ostream[k] == blockDedent:
+				while ostream[k].string == blockDedent:
 					k -= 1
-				if len(ostream[k]) > 0 and ostream[k][-1] == "\t":
-					ostream[k] = ostream[k][:-1]
+				if len(ostream[k].string) > 0 and ostream[k].string[-1] == "\t":
+					ostream[k].string = ostream[k].string[:-1]
 
 				# insert block end marker
 				if blockEndMarker is not None:
@@ -177,21 +216,44 @@ def fmt(src, check = True, debug = False):
 					elif len(blockStack) > 0 and blockStack[-1] == "case":
 						pass
 					else:
+						# move the end marker up so empty lines don't belong to the block
+						cor = corresponding[t]
+						outerIndent = outer[cor]
+
+						if outerIndent is None:
+							originalIndentBeforeDedent = 0
+						else:
+							originalIndentBeforeDedent = len(outerIndent.string)
 						k = len(ostream)
-						while (
-							len(ostream[k-1]) == 0
-							or ostream[k-1] in [blockDedent, "\n"]
-							or ostream[k-1].count("\t") == len(ostream[k-1])
-						):
+
+						while True:
 							k -= 1
-						ostream.insert(k, "\n" + "\t" * indentLevel + blockEndMarker)
+							if len(ostream[k].string) == 0:
+								continue
+							if ostream[k].string in [blockDedent, "\n"]:
+								continue
+							if ostream[k].string.count("\t") == len(ostream[k].string): # check if only tabs
+								continue
+							if ostream[k].fromToken.type == tokenize.COMMENT:
+								# we also move past comments if they are not indented further than the current line
+								# note that we consider their original indentation
+								if (
+									ostream[k-1].string.count("\t") == len(ostream[k-1].string) # check if only tabs
+									and len(ostream[k-1].fromToken.string) <= originalIndentBeforeDedent
+								):
+									# move the comment to the proper indentation
+									ostream[k-1].string = "\t" * indentLevel
+									continue
+							break
+						ostream.insert(k+1, Value(t, "\n"))
+						ostream.insert(k+2, Value(t, "\t" * indentLevel))
+						ostream.insert(k+3, Value(t, blockEndMarker))
 
 				blockStack.pop()
-				print(blockStack)
 
-				ostream.append(blockDedent)
+				ostream.append(Value(t, blockDedent))
 			elif t.type == tokenize.OP and t.string in "([{":
-				ostream.append(t.string)
+				ostream.append(Value(t, t.string))
 				bracketLevel += 1
 				if t not in coalesce:
 					indentLevel += 1
@@ -199,27 +261,27 @@ def fmt(src, check = True, debug = False):
 				bracketLevel -= 1
 				if t not in coalesce:
 					indentLevel -= 1
-				ostream.append(t.string)
+				ostream.append(Value(t, t.string))
 			elif t.type == tokenize.NEWLINE or t.type == tokenize.NL:
-				ostream.append("\n")
-				ostream.append("\t" * indentLevel)
+				ostream.append(Value(t, "\n"))
+				ostream.append(Value(tokensAndWhitespaces[i+1], "\t" * indentLevel))
 			elif t.type == tokenize.OP and t.string in ["+", "-"]:
 				if lastToken.string in ["True", "False", "None", ")", "]", "}", "..."] \
 						or lastToken.type in [tokenize.NAME, tokenize.NUMBER, tokenize.STRING]:
 					isInfix[t] = True
 				else:
 					isInfix[t] = False
-				ostream.append(t.string)
+				ostream.append(Value(t, t.string))
 			else:
-				ostream.append(t.string)
+				ostream.append(Value(t, t.string))
 
 			lastToken = t
 		elif type(t) == WhiteSpace:
 			if t.string == "\\\n":
-				ostream.append(t.string)
-				ostream.append("\t" * indentLevel)
+				ostream.append(Value(t, t.string))
+				ostream.append(Value(t, "\t" * indentLevel))
 				if bracketLevel <= 0:
-					ostream.append("\t")
+					ostream.append(Value(t, "\t"))
 			else:
 				if i > 0:
 					prv = tokensAndWhitespaces[i-1]
@@ -249,9 +311,9 @@ def fmt(src, check = True, debug = False):
 				elif prv.type == tokenize.OP and prv.string in ["+", "-"] and isInfix[prv] is False:
 					pass
 				else:
-					ostream.append(" ")
+					ostream.append(Value(t, " "))
 
-	interRep = "".join(ostream)
+	interRep = "".join([v.string for v in ostream])
 	if debug:
 		print(ostream)
 		print(interRep)
@@ -295,7 +357,8 @@ def fmt(src, check = True, debug = False):
 
 	# put strings and comments back
 	interRep = interRep.replace("%", escape)
-	interRep = interRep.replace(substitute, "%s")
+	interRep = interRep.replace(subsString, "%s")
+	interRep = interRep.replace(subsComment, "%s")
 	interRep = interRep % tuple(stringsAndComments)
 	interRep = interRep.replace(escape, "%")
 
@@ -334,4 +397,4 @@ if __name__ == "__main__":
 		out = args.filename
 
 	with open(out, "w") as outFile:
-		outFile.write(fmt(src, blockEndMarker = "end", debug = args.debug, check = False))
+		outFile.write(fmt(src, debug = args.debug, check = False))

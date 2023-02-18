@@ -1,0 +1,12 @@
+if 1:
+	# this comment needs to be indented
+	pass
+
+# make sure that implicit end markers are on the correct level
+if 1.1:
+	if 2:
+		2
+	end # <- there has to be an end here
+elif 1.2: <- although there is an elif here
+	pass
+end
