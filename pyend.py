@@ -11,7 +11,6 @@ def fmt(src, check = True, debug = False):
 	# (will otherwise not be categorized as implicit block-end-marker when formatting already formatted code)
 
 	if debug:
-# test
 		blockIndent = "⟩"
 		blockDedent = "⟨"
 		escape = "␛"
@@ -177,8 +176,6 @@ def fmt(src, check = True, debug = False):
 				ostream.append(Value(t, subsComment))
 				stringsAndComments.append(t.string)
 			elif t.type == tokenize.INDENT:
-				ostream.append(Value(t, blockIndent))
-				ostream.append(Value(t, "\t"))
 				indentLevel += 1
 				# find the token that caused this indent: the first NAME after the last but one NEWLINE
 				j = i
@@ -193,6 +190,18 @@ def fmt(src, check = True, debug = False):
 					blockStack.append(None)
 				else:
 					blockStack.append(tokensAndWhitespaces[j].string)
+				# make sure any comments between the : and the INDENT token are also indented
+				j = len(ostream)-1
+				while j > 1 and ostream[j].fromToken.type in [
+					WhiteSpace, tokenize.NL, tokenize.NEWLINE, tokenize.COMMENT
+				]:
+					if ostream[j].fromToken.type == tokenize.COMMENT:
+						ostream[j-1].string += "\t"
+					j -= 1
+
+				ostream.append(Value(t, blockIndent))
+				ostream.append(Value(t, "\t"))
+
 			elif t.type == tokenize.DEDENT:
 				indentLevel -= 1
 
