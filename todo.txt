@@ -4,6 +4,10 @@ if 1.1:
 	if 2:
 		2
 	end # <- there has to be an end here
-elif 1.2: <- although there is an elif here
+elif 1.2: # <- although there is an elif here
 	pass
 end
+
+myList[1:2] vs myDict = {1: 2}
+
+make sure that "end" variables can still exist by only recognizing an end alone on its line (or with a comment) 
