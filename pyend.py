@@ -294,8 +294,6 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 				if isExpressionEnd(tokens[j]):
 					t.newString = "" # infix +/-
 
-
-
 	# remove the last (always empty) line
 	del lines[-1]
 

@@ -37,8 +37,6 @@ if None:
 end
 ```
 
-However, PyEnd conveniently inserts that if an `end` marker is found (TODO).
-
 Furthermore, `myList[0:5]` still absolutely counter-intuitively only goes up to `myList[4]` and there is also [this atrocity](https://www.geeksforgeeks.org/least-astonishment-and-the-mutable-default-argument-in-python/).
 
 ## But in my project I have a variable named `end`. Am I forced to live under van Rossum's dictatorship then?
