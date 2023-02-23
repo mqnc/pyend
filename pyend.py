@@ -127,7 +127,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 	logicalIndent = 0
 	opticalIndent = 0
 	addOpticalIndentNextLine = 0
-	bracketLevel = 0
+	bracketStack = []
 
 	for i, t in enumerate(tokens):
 		currentLine.tokens.append(t)
@@ -141,12 +141,12 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 			lines.append(currentLine)
 			opticalIndent += addOpticalIndentNextLine
 			addOpticalIndentNextLine = 0
-			if t.type == ESCAPED_NL and bracketLevel == 0:
+			if t.type == ESCAPED_NL and len(bracketStack) == 0:
 				opticalIndent += 1
 				addOpticalIndentNextLine -= 1
 
 		elif t.srcString in ["(", "[", "{"]:
-			bracketLevel += 1
+			bracketStack.append(t.srcString)
 			if(
 				t.outer is not None
 				and t.corresponding is not None
@@ -160,8 +160,8 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 				addOpticalIndentNextLine += 1
 
 		elif t.srcString in ["}", "]", ")"]:
-			if bracketLevel > 0:
-				bracketLevel -= 1
+			if len(bracketStack) > 0:
+				bracketStack.pop()
 			if not t.coalesce:
 				if len(currentLine.tokens) == 2:
 					# this is the first token after the whitespace, dedent this line already
@@ -259,6 +259,12 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 				len(prv.srcString) > 0 and prv.srcString[-1] in ["(", "[", "{", ".", "~", "\t", "\n"]
 				or prv.srcString == "**"
 				or prv.type in noSpaceAround
+			):
+				t.newString = ""
+			elif ( # don't insert spaces after ":" inside []
+				nxt.srcString == ":"
+				and len(bracketStack) > 0
+				and bracketStack[-1] == "["
 			):
 				t.newString = ""
 			elif ( # don't insert spaces before:

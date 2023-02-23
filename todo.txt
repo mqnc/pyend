@@ -1,14 +1,2 @@
 
-# make sure that implicit end markers are on the correct level
-if 1.1:
-	if 2:
-		2
-	end # <- there has to be an end here
-elif 1.2: # <- although there is an elif here
-	pass
-end
-
-space after colon:
-myList[1:2] vs myDict = {1: 2}
-
 outomatically write pass in empty blocks
