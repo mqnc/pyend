@@ -1,4 +1,4 @@
-from tokenize import generate_tokens, detect_encoding, tok_name, \
+from tokenize import generate_tokens, detect_encoding, \
 	NAME, NUMBER, STRING, OP, INDENT, DEDENT, NEWLINE, NL, COMMENT, ENCODING, ENDMARKER
 import io
 import keyword
@@ -37,7 +37,7 @@ class ScopeToken(Token):
 
 WHITESPACE = -1
 ESCAPED_NL = -2
-
+BLOCK_END = -3
 
 def fmt(src, insertEnd = True, validate = True, debug = False):
 
@@ -85,12 +85,12 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 				tokens.append(Token(ESCAPED_NL, "\\\n"))
 			tokens.append(Token(WHITESPACE, ws))
 
-		if t_.type == OP and t_.string in "([{":
+		if t_.string in ["(", "[", "{"]:
 			t = ScopeToken(t_.type, t_.string, t_.start[0])
 			if len(bracketStack) > 0:
 				t.outer = bracketStack[-1]
 			bracketStack.append(t)
-		elif t_.type == OP and t_.string in "}])":
+		elif t_.string in ["}", "]", ")"]:
 			t = ScopeToken(t_.type, t_.string, t_.start[0])
 			if len(bracketStack) > 0:
 				t.corresponding = bracketStack.pop()
@@ -105,12 +105,18 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 			if len(indentStack) > 0:
 				t.corresponding = indentStack.pop()
 				t.corresponding.corresponding = t
+		elif (
+			t_.string == blockEndMarker
+			and tokensNoWs[i-1].type in [NEWLINE, NL, DEDENT, INDENT]
+			and tokensNoWs[i+1].type in [NEWLINE, COMMENT]
+		):
+			t = Token(BLOCK_END, t_.string, t_.start[0])
 		else:
 			t = Token(t_.type, t_.string, t_.start[0])
 
 		tokens.append(t)
 
-		lastTokenEndLC = t_._asdict()["end"] # validate fails on .end
+		lastTokenEndLC = t_.end
 
 	# remove very first white space
 	tokens = tokens[1:]		
@@ -139,7 +145,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 				opticalIndent += 1
 				addOpticalIndentNextLine -= 1
 
-		elif t.type == OP and t.srcString in "([{":
+		elif t.srcString in ["(", "[", "{"]:
 			bracketLevel += 1
 			if(
 				t.outer is not None
@@ -153,7 +159,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 			else:
 				addOpticalIndentNextLine += 1
 
-		elif t.type == OP and t.srcString in "}])":
+		elif t.srcString in ["}", "]", ")"]:
 			if bracketLevel > 0:
 				bracketLevel -= 1
 			if not t.coalesce:
@@ -196,8 +202,11 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 				if len(tokens) > i + 2:
 					nextToken = tokens[i+2] # i+1 is Whitespace
 
-				if nextToken.srcString in ["elif", "else", "catch", "finally", blockEndMarker] \
-						or t.corresponding.blockHead.srcString == "case":
+				if (
+					nextToken.type == BLOCK_END
+					or nextToken.srcString in ["elif", "else", "catch", "finally"]
+					or t.corresponding.blockHead.srcString == "case"
+				):
 					pass
 				else:
 					# move the end marker up so empty lines don't belong to the block
@@ -227,7 +236,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 					lines[ln].breakBefore = NEWLINE
 					lines.insert(ln, endLine)
 					endLine.tokens.append(Token(WHITESPACE, "\t" * logicalIndent, -1))
-					endLine.tokens.append(Token(NAME, blockEndMarker, -1))
+					endLine.tokens.append(Token(BLOCK_END, blockEndMarker, -1))
 					endLine.tokens.append(Token(NEWLINE, "\n", -1))
 
 		elif t.type == WHITESPACE:
@@ -336,14 +345,14 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 				assert t1.string == t2.string
 		assert len(filteredOriginalTokens) == len(filteredFormattedTokens)
 
-		# is there a DEDENT before every end?
-		endDefined = False
+		# is there a DEDENT before every alone-on-its-line end?
 		for i, t in enumerate(formattedTokens):
-			if t.string == blockEndMarker:
-				if not endDefined:
-					endDefined = True
-				else:
-					assert formattedTokens[i-1].type == DEDENT
+			if (
+				t.string == blockEndMarker
+				and formattedTokens[i-1].type in [NEWLINE, NL, DEDENT, INDENT]
+				and formattedTokens[i+1].type in [NEWLINE, COMMENT]
+			):
+				assert formattedTokens[i-1].type == DEDENT
 
 		# is there a "elif", "else", "catch", "finally" or blockEndMarker after every DEDENT?
 		for i, t in enumerate(formattedTokens):

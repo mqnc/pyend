@@ -1,14 +1,14 @@
-# pyend
+# PyEnd
 
 Python's significant indentation is a [horrible](https://www.quora.com/What-are-the-downsides-to-whitespace-indentation-rather-than-requiring-curly-braces) thing that [ruins](https://qr.ae/pr9Pxf) the language for [many](https://news.ycombinator.com/item?id=1463451
 ) [people](https://www.linkedin.com/pulse/why-python-indentation-sucks-what-can-done-spoiler-alert-mayank-verma).
 
 It's now fixed.
 
-pyend introduces `end` to mark the end of blocks:
+PyEnd introduces `end` to mark the end of blocks:
 
 ```python
-from pyend import end
+from PyEnd import end
 
 if "tabs" > "spaces":
 	print("∎")
@@ -37,10 +37,18 @@ if None:
 end
 ```
 
-However, pyend conveniently inserts that if an `end` marker is found (TODO).
+However, PyEnd conveniently inserts that if an `end` marker is found (TODO).
 
 Furthermore, `myList[0:5]` still absolutely counter-intuitively only goes up to `myList[4]` and there is also [this atrocity](https://www.geeksforgeeks.org/least-astonishment-and-the-mutable-default-argument-in-python/).
+
+## But in my project I have a variable named `end`. Am I forced to live under van Rossum's dictatorship then?
+
+PyEnd only recognizes an `end` on an otherwise empty line (except for comments) as block end marker. It is a bit ugly as `end` then becomes a reference to your variable but what can we do about it.
 
 ## This is a great project! You are very clever and handsome! Can you also do this for YAML?
 
 Thanks but no. YAML is [screwed up beyond repair](https://en.wikipedia.org/wiki/YAML#Criticism), starting with its very funny name and not ending with its ambiguity. Use JSON. It has its [problems](https://seriot.ch/projects/parsing_json.html) as well but I like it more 😌
+
+## Disclosure
+
+If I didn't consider Python to be a great language, I wouldn't invest so much time into this project. But this issue has been an absolute PITA and the urge to do something about it has been bugging me with every paste. I finally gave in.
