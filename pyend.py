@@ -39,7 +39,7 @@ WHITESPACE = -1
 ESCAPED_NL = -2
 BLOCK_END = -3
 
-def fmt(src, insertEnd = True, validate = True, debug = False):
+def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 
 	blockEndMarker = "end" # has to be a single token to work
 	# (will otherwise not be categorized as implicit block-end-marker when formatting already formatted code)
@@ -210,7 +210,10 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 					pass
 				else:
 					# move the end marker up so empty lines don't belong to the block
-					originalIndentBeforeDedent = len(t.corresponding.blockHead.line.tokens[0].srcString)
+					headLine = t.corresponding.blockHead.line
+					originalIndentBeforeDedent = len(headLine.tokens[0].srcString) # whitespace
+					if headLine.tokens[1].type == INDENT:
+						originalIndentBeforeDedent += len(headLine.tokens[1].srcString)
 
 					ln = len(lines) - 2
 
@@ -235,9 +238,11 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 					endLine = Line(lines[ln].breakBefore)
 					lines[ln].breakBefore = NEWLINE
 					lines.insert(ln, endLine)
-					endLine.tokens.append(Token(WHITESPACE, "\t" * logicalIndent, -1))
+					endLine.tokens.append(Token(WHITESPACE, "", -1))
 					endLine.tokens.append(Token(BLOCK_END, blockEndMarker, -1))
 					endLine.tokens.append(Token(NEWLINE, "\n", -1))
+					endLine.logicalIndent = logicalIndent
+					endLine.opticalIndent = logicalIndent
 
 		elif t.type == WHITESPACE:
 			prv = tokens[i-1]
@@ -305,8 +310,10 @@ def fmt(src, insertEnd = True, validate = True, debug = False):
 		if len(line.tokens) > 2: # empty lines have 2 tokens: WHITESPACE and \n
 			if debug:
 				ostream.append("⊢−−⊣" * line.opticalIndent)
-			else:
+			elif useTabs:
 				ostream.append("\t" * line.opticalIndent)
+			else:
+				ostream.append(" " * (11 * line.opticalIndent))
 		for t in line.tokens:
 			if t.type == INDENT and debug:
 				ostream.append(">")
@@ -370,6 +377,8 @@ if __name__ == "__main__":
 	parser.add_argument("filename")
 	parser.add_argument("-d", "--debug", action="store_true")
 	parser.add_argument("-o", "--out")
+	parser.add_argument(
+		"--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces", action="store_true")
 
 	args = parser.parse_args()
 
@@ -384,4 +393,5 @@ if __name__ == "__main__":
 		out = args.filename
 
 	with open(out, "w") as outFile:
-		outFile.write(fmt(src, debug = args.debug))
+		outFile.write(fmt(src, debug = args.debug,
+		    useTabs=not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces))

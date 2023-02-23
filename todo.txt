@@ -8,10 +8,7 @@ elif 1.2: # <- although there is an elif here
 	pass
 end
 
+space after colon:
 myList[1:2] vs myDict = {1: 2}
 
-make sure that "end" variables can still exist by only recognizing an end alone on its line (or with a comment)
-
 outomatically write pass in empty blocks
-
---convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces
