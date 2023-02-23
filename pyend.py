@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 from tokenize import generate_tokens, detect_encoding, \
 	NAME, NUMBER, STRING, OP, INDENT, DEDENT, NEWLINE, NL, COMMENT, ENCODING, ENDMARKER
 import io
@@ -73,15 +75,15 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 	indentStack = []
 
 	lastTokenEndLC = (0, 0)
-	for t_ in tokensNoWs:
+	for i, t_ in enumerate(tokensNoWs):
 		l, c = lastTokenEndLC
 		lastTokenEnd = lineOffsets[l]+c
 		l, c = t_.start
 		tokenStart = lineOffsets[l]+c
 
 		whiteSpace = srcString[lastTokenEnd:tokenStart]
-		for i, ws in enumerate(whiteSpace.split("\\\n")):
-			if i>0:
+		for j, ws in enumerate(whiteSpace.split("\\\n")):
+			if j>0:
 				tokens.append(Token(ESCAPED_NL, "\\\n"))
 			tokens.append(Token(WHITESPACE, ws))
 
@@ -119,7 +121,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 		lastTokenEndLC = t_.end
 
 	# remove very first white space
-	tokens = tokens[1:]		
+	tokens = tokens[1:]
 
 	# main formatting pass, also group tokens into lines
 	currentLine = Line(breakBefore=None)
@@ -375,27 +377,46 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 
 if __name__ == "__main__":
 	import argparse
+	import sys
+	import pyperclip
+
 	parser = argparse.ArgumentParser( prog = "pyend",
 		description = "format python files and insert block end markers")
 
-	parser.add_argument("filename")
-	parser.add_argument("-d", "--debug", action="store_true")
+	parser.add_argument("filename", nargs='?')
 	parser.add_argument("-o", "--out")
+	parser.add_argument("-c", "--clipboard", action="store_true")
 	parser.add_argument(
 		"--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces", action="store_true")
+	parser.add_argument("-d", "--debug", action="store_true")
 
 	args = parser.parse_args()
 
-	with open(args.filename) as inFile:
-		src = inFile.read()
+	if args.filename is None and not args.clipboard \
+			or args.filename is not None and args.clipboard:
+		parser.print_usage()
+		print("error: specify either an input file or --clipboard")
+		sys.exit(2)
 
+	if args.filename is not None:
+		with open(args.filename) as inFile:
+			src = inFile.read()
+	elif args.clipboard:
+		src = pyperclip.paste()
+
+	formatted = fmt(src, debug = args.debug,
+		useTabs=not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces)
+
+	out = None
 	if args.out is not None:
 		out = args.out
+	elif args.clipboard:
+		pyperclip.copy(formatted)
 	elif args.debug:
 		out = args.filename + ".fmt.dbg"
 	else:
 		out = args.filename
 
-	with open(out, "w") as outFile:
-		outFile.write(fmt(src, debug = args.debug,
-		    useTabs=not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces))
+	if out is not None:
+		with open(out, "w") as outFile:
+			outFile.write(formatted)

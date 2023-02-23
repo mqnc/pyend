@@ -17,7 +17,7 @@ end
 
 ## Why is that useful?
 
-Because it is also a formatter. It can automatically convert indentation-based code (both the file you are working on as well as the clipboard) into keyword-delimited code. You can then paste away and afterwards reformat your file automatically instead of manually.
+Because it is also a formatter. You can convert indentation-based code (both the file you are working on as well as the clipboard) into keyword-delimited code. You can then paste away and afterwards reformat your file automatically instead of manually.
 
 ## Hasn't this been done before?
 
