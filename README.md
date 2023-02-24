@@ -21,7 +21,7 @@ Because it is also a formatter. You can convert indentation-based code (both the
 
 ## Hasn't this been done before?
 
-In contrast to [pindent](https://svn.python.org/projects/python/trunk/Tools/scripts/pindent.py) it works with Python 3.11 and in contrast to [pybrace](https://github.com/mayank-verma048/PyBrace) and [pybraces](https://timhatch.com/projects/pybraces/), the output is still valid Python code.
+In contrast to [pindent](https://svn.python.org/projects/python/trunk/Tools/scripts/pindent.py) it works with Python 3 and in contrast to [pybrace](https://github.com/mayank-verma048/PyBrace) and [pybraces](https://timhatch.com/projects/pybraces/), the output is still valid Python code.
 
 ## Does it stop there?
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo inserting end marks...
+python3 pyend.py pyend.py -e --out pyend.end.py
+
+echo removing all indentation...
+sed 's/	//g' pyend.end.py > pyend.noindent.txt
+
+echo restoring indentation...
+python3 pyend.py pyend.noindent.txt -i --out pyend.reindent.py
+
+echo comparing...
+diff -s pyend.end.py pyend.reindent.py

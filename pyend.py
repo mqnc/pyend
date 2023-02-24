@@ -39,12 +39,15 @@ class ScopeToken(Token):
 
 WHITESPACE = -1
 ESCAPED_NL = -2
-BLOCK_END = -3
+BLOCK_START = -3
+BLOCK_END = -4
 
-def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
+def fmt(src, insertEnd, ignoreIndent, indentWith="\t", validate = True, debug = False):
 
 	blockEndMarker = "end" # has to be a single token to work
 	# (will otherwise not be categorized as implicit block-end-marker when formatting already formatted code)
+
+	implicitBlockEnd = ["elif", "else", "catch", "finally"]
 
 	# convert to string
 	if type(src) == bytes:
@@ -57,15 +60,44 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 	if srcString[-1] != "\n":
 		srcString += "\n"
 
+	# tokenize
+	inputLines = []
+	tokensNoWs = []
+
+	if ignoreIndent:
+		# We need to strip all indentation before tokenizing because the tokenizer can throw
+		# if the source is badly indented. However, we cannot simply remove leading space
+		# from all source lines because we must not change multi line strings. So there is
+		# this line by line dance with the tokenizer going on now:
+		strip = True
+		buf = io.StringIO(srcString)
+
+		def readLineAndStripExceptInStrings():
+			nonlocal strip, inputLines
+			line = buf.readline()
+			if strip:
+				strip = False
+				line = line.lstrip(" \t")
+			inputLines.append(line)
+			return line
+		
+		for t in generate_tokens(readLineAndStripExceptInStrings):
+			tokensNoWs.append(t)
+			strip = True
+
+		srcString = "".join(inputLines)
+	else:
+		inputLines = io.StringIO(srcString).readlines()
+		tokensNoWs = list(generate_tokens(io.StringIO(srcString).readline))
+
+	inputLines.append("")
+
 	# for converting (line, column) to char index
-	inputLines = io.StringIO(srcString).readlines() + [""]
 	lineOffsets = [0, 0]
 	sum = 0
 	for line in inputLines:
 		sum += len(line)
 		lineOffsets.append(sum)
-
-	tokensNoWs = list(generate_tokens(io.StringIO(srcString).readline))
 
 	tokens = []
 
@@ -108,6 +140,11 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 				t.corresponding = indentStack.pop()
 				t.corresponding.corresponding = t
 		elif (
+			t_.string == ":"
+			and tokensNoWs[i+1].type in [NEWLINE, COMMENT]
+		):
+			t = Token(BLOCK_START, t_.string, t_.start[0])
+		elif (
 			t_.string == blockEndMarker
 			and tokensNoWs[i-1].type in [NEWLINE, NL, DEDENT, INDENT]
 			and tokensNoWs[i+1].type in [NEWLINE, COMMENT]
@@ -128,6 +165,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 	lines = [currentLine]
 	logicalIndent = 0
 	opticalIndent = 0
+	addLogicalIndentNextLine = 0
 	addOpticalIndentNextLine = 0
 	bracketStack = []
 
@@ -141,7 +179,9 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 			# new line
 			currentLine = Line(t.type)
 			lines.append(currentLine)
+			logicalIndent += addLogicalIndentNextLine
 			opticalIndent += addOpticalIndentNextLine
+			addLogicalIndentNextLine = 0
 			addOpticalIndentNextLine = 0
 			if t.type == ESCAPED_NL and len(bracketStack) == 0:
 				opticalIndent += 1
@@ -172,6 +212,24 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 					# keep this line indented
 					addOpticalIndentNextLine -= 1
 
+		elif ignoreIndent and t.type == BLOCK_START:
+			addLogicalIndentNextLine += 1
+			addOpticalIndentNextLine += 1
+
+		elif ignoreIndent and t.type == BLOCK_END:
+			logicalIndent -= 1
+			opticalIndent -= 1
+
+		elif ignoreIndent and t.srcString in implicitBlockEnd:
+			# we could be fooled by a deceptively constructed ternary if, so check if there was a NEWLINE before
+			j = i-1
+			
+			while j > 0 and tokens[j].type in [WHITESPACE, NL, ESCAPED_NL, COMMENT]:
+				j -= 1
+			if tokens[j].type == NEWLINE:
+				logicalIndent -= 1
+				opticalIndent -= 1
+			
 		elif t.type == INDENT:
 			t.newString = ""
 			logicalIndent += 1
@@ -206,7 +264,7 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 
 				if (
 					nextToken.type == BLOCK_END
-					or nextToken.srcString in ["elif", "else", "catch", "finally"]
+					or nextToken.srcString in implicitBlockEnd
 					or t.corresponding.blockHead.srcString == "case"
 				):
 					pass
@@ -316,10 +374,8 @@ def fmt(src, insertEnd = True, validate = True, debug = False, useTabs = True):
 		if len(line.tokens) > 2: # empty lines have 2 tokens: WHITESPACE and \n
 			if debug:
 				ostream.append("⊢−−⊣" * line.opticalIndent)
-			elif useTabs:
-				ostream.append("\t" * line.opticalIndent)
 			else:
-				ostream.append(" " * (11 * line.opticalIndent))
+				ostream.append(indentWith * line.opticalIndent)
 		for t in line.tokens:
 			if t.type == INDENT and debug:
 				ostream.append(">")
@@ -386,8 +442,16 @@ if __name__ == "__main__":
 	parser.add_argument("filename", nargs='?')
 	parser.add_argument("-o", "--out")
 	parser.add_argument("-c", "--clipboard", action="store_true")
+	parser.add_argument("-e", "--insert-end", action="store_true")
+	parser.add_argument("-i", "--ignore-indent", action="store_true")
+	#parser.add_argument("-s", "--strip-end", action="store_true")
 	parser.add_argument(
 		"--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces", action="store_true")
+	parser.add_argument(
+		"--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default",
+		type=int, default=11
+	)
+	
 	parser.add_argument("-d", "--debug", action="store_true")
 
 	args = parser.parse_args()
@@ -398,14 +462,28 @@ if __name__ == "__main__":
 		print("error: specify either an input file or --clipboard")
 		sys.exit(2)
 
+	if args.insert_end and args.ignore_indent:
+		parser.print_usage()
+		print("error: can only insert end marks (-e) if the code is properly indented")
+		print("or ignore indentation (-i) if all blocks have end marks")
+		sys.exit(2)
+
 	if args.filename is not None:
 		with open(args.filename) as inFile:
 			src = inFile.read()
 	elif args.clipboard:
 		src = pyperclip.paste()
 
-	formatted = fmt(src, debug = args.debug,
-		useTabs=not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces)
+	formatted = fmt(
+		src,
+		insertEnd = args.insert_end,
+		ignoreIndent = args.ignore_indent,
+		indentWith = (
+			"\t" if not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces
+			else " " * args.use_this_many_spaces_per_tab_cuz_as_a_spacist_i_want_uniformity_but_i_dont_want_the_default
+		),
+		debug = args.debug
+	)
 
 	out = None
 	if args.out is not None:
