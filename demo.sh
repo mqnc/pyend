@@ -11,3 +11,9 @@ python3 pyend.py pyend.noindent.txt -i --out pyend.reindent.py
 
 echo comparing...
 diff -s pyend.end.py pyend.reindent.py
+
+echo removing all end marks...
+python3 pyend.py pyend.reindent.py -s --out pyend.noend.py
+
+echo comparing...
+diff -s pyend.py pyend.noend.py

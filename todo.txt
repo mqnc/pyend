@@ -1,3 +1,7 @@
-for ignoring indentation, the tokenizer must not hickup.
-so we have to modify the readline function to strip all whitespaces in the beginning of a line if the last returned token was a NEWLINE or NL
-(tokenizer must not be in a string)
+do diffs with many test files
+
+strip end marks
+
+automatic from pyend import end
+
+option for end = None
