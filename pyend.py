@@ -14,8 +14,11 @@ class Line:
 		self.tokens = []
 		self.logicalIndent = 0
 		self.opticalIndent = 0
+	end
 	def __repr__(self):
 		return repr(self.tokens)
+	end
+end
 
 class Token:
 	__slots__ = ("type", "srcString", "newString", "originalLine", "line")
@@ -25,8 +28,11 @@ class Token:
 		self.newString = srcString
 		self.originalLine = origLine
 		self.line = None
+	end
 	def __repr__(self):
 		return self.srcString
+	end
+end
 
 class ScopeToken(Token):
 	__slots__ = ("corresponding", "outer", "blockHead", "coalesce")
@@ -36,6 +42,8 @@ class ScopeToken(Token):
 		self.outer = None # for opening tokens, the opening token one level higher
 		self.coalesce = False # for brackets, whether they don't need extra indentation
 		self.blockHead = None # for indents the token at the start of the block
+	end
+end
 
 WHITESPACE = -1
 ESCAPED_NL = -2
@@ -63,12 +71,14 @@ def fmt(
 		srcString = src.decode(encoding)
 	else:
 		srcString = src
+	end
 
-		# always end with \n
+	# always end with \n
 	if srcString[-1] != "\n":
 		srcString += "\n"
+	end
 
-		# tokenize
+	# tokenize
 	inputLines = []
 	tokensNoWs = []
 
@@ -86,17 +96,21 @@ def fmt(
 			if strip:
 				strip = False
 				line = line.lstrip(" \t")
+			end
 			inputLines.append(line)
 			return line
+		end
 
 		for t in generate_tokens(readLineAndStripExceptInStrings):
 			tokensNoWs.append(t)
 			strip = True
+		end
 
 		srcString = "".join(inputLines)
 	else:
 		inputLines = io.StringIO(srcString).readlines()
 		tokensNoWs = list(generate_tokens(io.StringIO(srcString).readline))
+	end
 
 	inputLines.append("")
 
@@ -106,6 +120,7 @@ def fmt(
 	for line in inputLines:
 		sum += len(line)
 		lineOffsets.append(sum)
+	end
 
 	tokens = []
 
@@ -125,28 +140,34 @@ def fmt(
 		for j, ws in enumerate(whiteSpace.split("\\\n")):
 			if j > 0:
 				tokens.append(Token(ESCAPED_NL, "\\\n"))
+			end
 			tokens.append(Token(WHITESPACE, ws))
+		end
 
 		if t_.string in ["(", "[", "{"]:
 			t = ScopeToken(t_.type, t_.string, t_.start[0])
 			if len(bracketStack) > 0:
 				t.outer = bracketStack[-1]
+			end
 			bracketStack.append(t)
 		elif t_.string in ["}", "]", ")"]:
 			t = ScopeToken(t_.type, t_.string, t_.start[0])
 			if len(bracketStack) > 0:
 				t.corresponding = bracketStack.pop()
 				t.corresponding.corresponding = t
+			end
 		elif t_.type == INDENT:
 			t = ScopeToken(t_.type, t_.string, t_.start[0])
 			if len(indentStack) > 0:
 				t.outer = indentStack[-1]
+			end
 			indentStack.append(t)
 		elif t_.type == DEDENT:
 			t = ScopeToken(t_.type, t_.string, t_.start[0])
 			if len(indentStack) > 0:
 				t.corresponding = indentStack.pop()
 				t.corresponding.corresponding = t
+			end
 		elif (
 			t_.string == ":"
 			and tokensNoWs[i + 1].type in [NEWLINE, COMMENT]
@@ -160,12 +181,14 @@ def fmt(
 			t = Token(BLOCK_END, t_.string, t_.start[0])
 		else:
 			t = Token(t_.type, t_.string, t_.start[0])
+		end
 
 		tokens.append(t)
 
 		lastTokenEndLC = t_.end
+	end
 
-		# remove very first white space
+	# remove very first white space
 	tokens = tokens[1:]
 
 	# main formatting pass, also group tokens into lines
@@ -194,6 +217,7 @@ def fmt(
 			if t.type == ESCAPED_NL and len(bracketStack) == 0:
 				opticalIndent += 1
 				addOpticalIndentNextLine -= 1
+			end
 
 		elif t.srcString in ["(", "[", "{"]:
 			bracketStack.append(t.srcString)
@@ -208,10 +232,12 @@ def fmt(
 				t.corresponding.coalesce = True
 			else:
 				addOpticalIndentNextLine += 1
+			end
 
 		elif t.srcString in ["}", "]", ")"]:
 			if len(bracketStack) > 0:
 				bracketStack.pop()
+			end
 			if not t.coalesce:
 				if len(currentLine.tokens) == 2:
 					# this is the first token after the whitespace, dedent this line already
@@ -219,6 +245,8 @@ def fmt(
 				else:
 					# keep this line indented
 					addOpticalIndentNextLine -= 1
+				end
+			end
 
 		elif ignoreIndent and t.type == BLOCK_START:
 			addLogicalIndentNextLine += 1
@@ -234,9 +262,11 @@ def fmt(
 
 			while j > 0 and tokens[j].type in [WHITESPACE, NL, ESCAPED_NL, COMMENT]:
 				j -= 1
+			end
 			if tokens[j].type == NEWLINE:
 				logicalIndent -= 1
 				opticalIndent -= 1
+			end
 
 		elif t.type == INDENT:
 			t.newString = ""
@@ -251,9 +281,12 @@ def fmt(
 				newLines += tokens[j].type == NEWLINE
 				if colon is None and tokens[j].srcString == ":":
 					colon = tokens[j]
+				end
 				j -= 1
+			end
 			while j < i and tokens[j].type != NAME:
 				j += 1
+			end
 			t.blockHead = tokens[j] if tokens[j].type == NAME else None
 			if colon is not None:
 				ln = lines.index(colon.line) + 1
@@ -261,48 +294,55 @@ def fmt(
 					lines[ln].logicalIndent += 1
 					lines[ln].opticalIndent += 1
 					ln += 1
+				end
+			end
 
 		elif t.type == DEDENT:
 			logicalIndent -= 1
 			opticalIndent -= 1
 
-			if insertEnd:
-				if len(tokens) > i + 2:
-					nextToken = tokens[i + 2] # i+1 is Whitespace
+			if len(tokens) > i + 2:
+				nextToken = tokens[i + 2] # i+1 is Whitespace
+			end
 
-				if (
-					nextToken.type == BLOCK_END
-					or nextToken.srcString in implicitBlockEnd
-					or t.corresponding.blockHead.srcString == "case"
-				):
-					pass
-				else:
-					# move the end mark up so empty lines don't belong to the block
-					headLine = t.corresponding.blockHead.line
-					originalIndentBeforeDedent = len(headLine.tokens[0].srcString) # whitespace
-					if headLine.tokens[1].type == INDENT:
-						originalIndentBeforeDedent += len(headLine.tokens[1].srcString)
+			if (
+				nextToken.type == BLOCK_END
+				or nextToken.srcString in implicitBlockEnd
+				or t.corresponding.blockHead.srcString == "case"
+			):
+				pass
+			else:
+				# move the end mark up so empty lines don't belong to the block
+				headLine = t.corresponding.blockHead.line
+				originalIndentBeforeDedent = len(headLine.tokens[0].srcString) # whitespace
+				if headLine.tokens[1].type == INDENT:
+					originalIndentBeforeDedent += len(headLine.tokens[1].srcString)
+				end
 
-					ln = len(lines) - 2
+				ln = len(lines) - 2
 
-					while ln > 0:
-						if (
-							# empty line, only WHITESPACE and \n
-							len(lines[ln].tokens) == 2
-							or (
-								# we also move past comments if they were originally
-								# not indented further than the current line
-								lines[ln].tokens[1].type == COMMENT
-								and len(lines[ln].tokens[0].srcString) <= originalIndentBeforeDedent
-							)
-						):
-							lines[ln].logicalIndent -= 1
-							lines[ln].opticalIndent -= 1
-							ln -= 1
-						else:
-							ln += 1
-							break
+				while ln > 0:
+					if (
+						# empty line, only WHITESPACE and \n
+						len(lines[ln].tokens) == 2
+						or (
+							# we also move past comments if they were originally
+							# not indented further than the current line
+							lines[ln].tokens[1].type == COMMENT
+							and len(lines[ln].tokens[0].srcString) <= originalIndentBeforeDedent
+						)
+					):
+						# possibly correct comment indentation
+						lines[ln].logicalIndent -= 1
+						lines[ln].opticalIndent -= 1
+						ln -= 1
+					else:
+						ln += 1
+						break
+					end
+				end
 
+				if insertEnd:
 					endLine = Line(lines[ln].breakBefore)
 					lines[ln].breakBefore = NEWLINE
 					lines.insert(ln, endLine)
@@ -311,6 +351,8 @@ def fmt(
 					endLine.tokens.append(Token(NEWLINE, "\n", -1))
 					endLine.logicalIndent = logicalIndent
 					endLine.opticalIndent = logicalIndent
+				end
+			end
 
 		elif t.type == WHITESPACE:
 			prv = tokens[i - 1]
@@ -322,6 +364,7 @@ def fmt(
 			def isExpressionEnd(token):
 				return token.srcString in ["True", "False", "None", ")", "]", "}", "..."] \
 					or token.type in [NAME, NUMBER, STRING]
+			end
 
 			if ( # space before comment overrules many of the following rules
 				nxt.type == COMMENT
@@ -362,16 +405,22 @@ def fmt(
 					t.newString = " " # infix +/-
 				else:
 					t.newString = "" # prefix +/-
+				end
 			else:
 				t.newString = " "
+			end
 
 			if nxt.srcString == "**": # "a**b" or ", **kwargs)"
 				j = i - 1
 				while j > 0 and tokens[j].type in skip: j -= 1
 				if isExpressionEnd(tokens[j]):
 					t.newString = "" # infix +/-
+				end
+			end
+		end
+	end
 
-					# remove the last (always empty) line after the mandatory last linebreak
+	# remove the last (always empty) line after the mandatory last linebreak
 	del lines[-1]
 
 
@@ -383,10 +432,14 @@ def fmt(
 			j = i - 1
 			while j > 1 and lines[j - 1].opticalIndent >= line.opticalIndent:
 				j -= 1
+			end
 			for k in range(j, i):
 				lines[k].opticalIndent += 1
+			end
+		end
+	end
 
-				# strip end marks (only flag them and exclude them in the next step as removing items from lists is expensive)
+	# strip end marks (only flag them and exclude them in the next step as removing items from lists is expensive)
 	toBeRemoved = set()
 	if stripEnd:
 		for line in lines:
@@ -397,17 +450,25 @@ def fmt(
 						toBeRemoved.add(id(line.tokens[i + 1]))
 					else:
 						toBeRemoved.add(id(line))
+					end
+				end
+			end
+		end
+	end
 
-						# compose output
+	# compose output
 	ostream = []
 	for line in lines:
 		if id(line) in toBeRemoved:
 			continue
+		end
 		if len(line.tokens) > 2: # empty lines have 2 tokens: WHITESPACE and \n
 			if debug:
 				ostream.append("⊢−−⊣" * line.opticalIndent)
 			else:
 				ostream.append(indentWith * line.opticalIndent)
+			end
+		end
 		for t in line.tokens:
 			if id(t) in toBeRemoved:
 				continue
@@ -420,6 +481,10 @@ def fmt(
 					ostream.append(t.newString.replace(" ", "⎵").replace("\n", "↲\n"))
 				else:
 					ostream.append(t.newString)
+				end
+			end
+		end
+	end
 
 	result = "".join(ostream)
 
@@ -436,8 +501,11 @@ def fmt(
 					continue
 				elif tokensNoWs[i].type not in [NL, COMMENT]:
 					filtered.append(tokensNoWs[i])
+				end
 				i += 1
+			end
 			return filtered
+		end
 
 		filteredOriginalTokens = filterForComparison(tokensNoWs)
 		filteredFormattedTokens = filterForComparison(formattedTokens)
@@ -446,6 +514,8 @@ def fmt(
 			assert t1.type == t2.type
 			if t1.type != INDENT:
 				assert t1.string == t2.string
+			end
+		end
 		assert len(filteredOriginalTokens) == len(filteredFormattedTokens)
 
 		# is there a DEDENT before every alone-on-its-line end?
@@ -456,14 +526,21 @@ def fmt(
 				and formattedTokens[i + 1].type in [NEWLINE, COMMENT]
 			):
 				assert formattedTokens[i - 1].type == DEDENT
+			end
+		end
 
-				# is there a "elif", "else", "catch", "finally" or blockEndMark after every DEDENT?
+		# is there a "elif", "else", "catch", "finally" or blockEndMark after every DEDENT?
 		if insertEnd:
 			for i, t in enumerate(formattedTokens):
 				if t.type == DEDENT:
 					assert formattedTokens[i + 1].string in ["elif", "else", "catch", "finally", blockEndMark]
+				end
+			end
+		end
+	end
 
 	return result
+end
 
 
 if __name__ == "__main__":
@@ -496,23 +573,28 @@ if __name__ == "__main__":
 		parser.print_usage()
 		print("error: specify either an input file or --clipboard")
 		sys.exit(2)
+	end
 
 	if args.insert_end and args.ignore_indent:
 		parser.print_usage()
 		print("error: can only insert end marks (-e) if the code is properly indented")
 		print("or ignore indentation (-i) if all blocks have end marks")
 		sys.exit(2)
+	end
 
 	if args.insert_end and args.strip_end:
 		parser.print_usage()
 		print("error: can only insert end marks (-e) or strip end marks (-s)")
 		sys.exit(2)
+	end
 
 	if args.filename is not None:
 		with open(args.filename) as inFile:
 			src = inFile.read()
+		end
 	elif args.clipboard:
 		src = pyperclip.paste()
+	end
 
 	formatted = fmt(
 		src,
@@ -535,7 +617,11 @@ if __name__ == "__main__":
 		out = args.filename + ".fmt.dbg"
 	else:
 		out = args.filename
+	end
 
 	if out is not None:
 		with open(out, "w") as outFile:
 			outFile.write(formatted)
+		end
+	end
+end

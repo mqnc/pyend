@@ -1,7 +1,5 @@
 do diffs with many test files
 
-strip end marks
-
 automatic from pyend import end
 
 option for end = None

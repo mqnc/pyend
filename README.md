@@ -41,7 +41,7 @@ Furthermore, `myList[0:5]` still absolutely counter-intuitively only goes up to 
 
 ## But in my project I have a variable named `end`. Am I forced to live under van Rossum's dictatorship then?
 
-PyEnd only recognizes an `end` on an otherwise empty line (except for comments) as block end marker. It is a bit ugly as `end` then becomes a reference to your variable but what can we do about it.
+PyEnd only recognizes an `end` on an otherwise empty line (except for comments) as block end mark. It is a bit ugly as `end` then becomes a reference to your variable but what can we do about it.
 
 ## This is a great project! You are very clever and handsome! Can you also do this for YAML?
 
