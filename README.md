@@ -8,7 +8,7 @@ It's now fixed.
 PyEnd introduces `end` to mark the end of blocks:
 
 ```python
-from PyEnd import end
+from pyend import end
 
 if "tabs" > "spaces":
 	print("∎")
