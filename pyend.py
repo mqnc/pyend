@@ -55,6 +55,7 @@ def fmt(
 	insertEnd,
 	ignoreIndent,
 	stripEnd,
+	defineEnd,
 	indentWith = "\t",
 	validate = True,
 	debug = False
@@ -126,6 +127,7 @@ def fmt(
 
 	# collect info about corresponding opening and closing brackets
 	# as well as indents and dedents
+	# also detect if end is defined
 	bracketStack = []
 	indentStack = []
 
@@ -199,6 +201,7 @@ def fmt(
 	addLogicalIndentNextLine = 0
 	addOpticalIndentNextLine = 0
 	bracketStack = []
+	endDefinedBeforeFirstOccurance = None
 
 	for i, t in enumerate(tokens):
 		currentLine.tokens.append(t)
@@ -255,6 +258,33 @@ def fmt(
 		elif ignoreIndent and t.type == BLOCK_END:
 			logicalIndent -= 1
 			opticalIndent -= 1
+			if endDefinedBeforeFirstOccurance is None:
+				endDefinedBeforeFirstOccurance = False
+			end
+
+		elif (
+			t.srcString == blockEndMark
+			and endDefinedBeforeFirstOccurance is None
+			and logicalIndent == 0
+			and len(tokens) > i + 2
+			and tokens[i + 2].srcString == "="
+		):
+			j = i - 1
+			while j > 0 and tokens[j].type in [WHITESPACE, NL, ESCAPED_NL, COMMENT]:
+				j -= 1
+			end
+			if tokens[j].type == NEWLINE:
+				endDefinedBeforeFirstOccurance = True
+			end
+
+		elif (
+			t.srcString == blockEndMark
+			and endDefinedBeforeFirstOccurance is None
+			and logicalIndent == 0
+			and i > 2
+			and tokens[i - 2].srcString == "import"
+		):
+			endDefinedBeforeFirstOccurance = True
 
 		elif ignoreIndent and t.srcString in implicitBlockEnd:
 			# we could be fooled by a deceptively constructed ternary if, so check if there was a NEWLINE before
@@ -300,6 +330,10 @@ def fmt(
 		elif t.type == DEDENT:
 			logicalIndent -= 1
 			opticalIndent -= 1
+
+			if endDefinedBeforeFirstOccurance is None:
+				endDefinedBeforeFirstOccurance = False
+			end
 
 			if len(tokens) > i + 2:
 				nextToken = tokens[i + 2] # i+1 is Whitespace
@@ -440,16 +474,16 @@ def fmt(
 	end
 
 	# strip end marks (only flag them and exclude them in the next step as removing items from lists is expensive)
-	toBeRemoved = set()
+	dontOutput = set()
 	if stripEnd:
 		for line in lines:
 			for i, t in enumerate(line.tokens):
 				if t.type == BLOCK_END:
 					if len(line.tokens) > i + 2 and line.tokens[i + 2].type == COMMENT:
-						toBeRemoved.add(id(t))
-						toBeRemoved.add(id(line.tokens[i + 1]))
+						dontOutput.add(id(t))
+						dontOutput.add(id(line.tokens[i + 1]))
 					else:
-						toBeRemoved.add(id(line))
+						dontOutput.add(id(line))
 					end
 				end
 			end
@@ -458,8 +492,23 @@ def fmt(
 
 	# compose output
 	ostream = []
+
+	if endDefinedBeforeFirstOccurance != True and insertEnd:
+		shebang = lines[0].tokens[0]
+		if (
+			shebang.type == COMMENT
+			and len(shebang.srcString) >= 2
+			and shebang.srcString[0: 2] == "#!"
+		):
+			ostream.append(shebang.newString + "\n" + defineEnd + "\n")
+			dontOutput.add(id(lines[0]))
+		else:
+			ostream.append(defineEnd + "\n")
+		end
+	end
+
 	for line in lines:
-		if id(line) in toBeRemoved:
+		if id(line) in dontOutput:
 			continue
 		end
 		if len(line.tokens) > 2: # empty lines have 2 tokens: WHITESPACE and \n
@@ -470,7 +519,7 @@ def fmt(
 			end
 		end
 		for t in line.tokens:
-			if id(t) in toBeRemoved:
+			if id(t) in dontOutput:
 				continue
 			elif t.type == INDENT and debug:
 				ostream.append(">")
@@ -557,13 +606,13 @@ if __name__ == "__main__":
 	parser.add_argument("-e", "--insert-end", action = "store_true")
 	parser.add_argument("-i", "--ignore-indent", action = "store_true")
 	parser.add_argument("-s", "--strip-end", action = "store_true")
+	parser.add_argument("-n", "--end-is-none", action = "store_true")
 	parser.add_argument(
 		"--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces", action = "store_true")
 	parser.add_argument(
 		"--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default",
 		type = int, default = 11
 	)
-
 	parser.add_argument("-d", "--debug", action = "store_true")
 
 	args = parser.parse_args()
@@ -584,7 +633,7 @@ if __name__ == "__main__":
 
 	if args.insert_end and args.strip_end:
 		parser.print_usage()
-		print("error: can only insert end marks (-e) or strip end marks (-s)")
+		print("error: can either insert end marks (-e) or strip end marks (-s)")
 		sys.exit(2)
 	end
 
@@ -601,6 +650,7 @@ if __name__ == "__main__":
 		insertEnd = args.insert_end,
 		ignoreIndent = args.ignore_indent,
 		stripEnd = args.strip_end,
+		defineEnd = "end = None" if args.end_is_none else "from pyend import end", # viral marketing
 		indentWith = (
 			"\t" if not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces
 			else " " * args.use_this_many_spaces_per_tab_cuz_as_a_spacist_i_want_uniformity_but_i_dont_want_the_default

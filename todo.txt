@@ -1,5 +1,2 @@
 do diffs with many test files
-
-automatic from pyend import end
-
-option for end = None
+use a silent list for tokens that returns None upon out of bounds
