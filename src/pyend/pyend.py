@@ -602,20 +602,19 @@ def main_cli():
 	parser = argparse.ArgumentParser(prog = "pyend",
 		description = "format python files and insert block end marks")
 
-	parser.add_argument("filename", nargs = '?')
-	parser.add_argument("-o", "--out")
-	parser.add_argument("-c", "--clipboard", action = "store_true")
-	parser.add_argument("-e", "--insert-end", action = "store_true")
-	parser.add_argument("-i", "--ignore-indent", action = "store_true")
-	parser.add_argument("-s", "--strip-end", action = "store_true")
-	parser.add_argument("-n", "--end-is-none", action = "store_true")
+	parser.add_argument("filename", nargs = '?', help = "input file name")
+	parser.add_argument("-o", "--out", help = "output file name, input file is overwritten if omitted")
+	parser.add_argument("-c", "--clipboard", action = "store_true", help = "use clipboard content as input (and output if no output file is specified)")
+	parser.add_argument("-e", "--insert-end", action = "store_true", help = "insert end marks based on indentation")
+	parser.add_argument("-i", "--ignore-indent", action = "store_true", help = "ignore indentation and format code only based on end marks")
+	parser.add_argument("-s", "--strip-end", action = "store_true", help = "remove all end marks")
+	parser.add_argument("-n", "--end-is-none", action = "store_true", help = "use 'end = None' instead of 'from pyend import end'")
 	parser.add_argument(
 		"--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces", action = "store_true")
 	parser.add_argument(
 		"--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default",
-		type = int, default = 11
+		type = int, default = 11, metavar = "NUMBER", help = "(default is 11)"
 	)
-	parser.add_argument("-d", "--debug", action = "store_true")
 
 	args = parser.parse_args()
 
@@ -657,7 +656,7 @@ def main_cli():
 			"\t" if not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces
 			else " " * args.use_this_many_spaces_per_tab_cuz_as_a_spacist_i_want_uniformity_but_i_dont_want_the_default
 		),
-		debug = args.debug
+		debug = False
 	)
 
 	out = None
