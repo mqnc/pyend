@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyend"
+version = "0.0.6"
+authors = [
+  { name="mqnc" },
+]
+description = "insert block end marks into python code for better formatting and copy paste experience"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/",
+  "/tests/",
+  "/demo.sh",
+  "/LICENSE",
+  "/README.md",
+  "/pyproject.toml"
+]
+
+[project.scripts]
+pyend = "pyend:main_cli"
+
+[project.urls]
+"Homepage" = "https://github.com/mqnc/pyend"
+"Bug Tracker" = "https://github.com/mqnc/pyend/issues"

@@ -7,49 +7,6 @@ import keyword
 
 end = None
 
-class Line:
-	__slots__ = ("breakBefore", "tokens", "logicalIndent", "opticalIndent")
-	def __init__(self, breakBefore):
-		self.breakBefore = breakBefore
-		self.tokens = []
-		self.logicalIndent = 0
-		self.opticalIndent = 0
-	end
-	def __repr__(self):
-		return repr(self.tokens)
-	end
-end
-
-class Token:
-	__slots__ = ("type", "srcString", "newString", "originalLine", "line")
-	def __init__(self, type, srcString, origLine = None):
-		self.type = type
-		self.srcString = srcString
-		self.newString = srcString
-		self.originalLine = origLine
-		self.line = None
-	end
-	def __repr__(self):
-		return self.srcString
-	end
-end
-
-class ScopeToken(Token):
-	__slots__ = ("corresponding", "outer", "blockHead", "coalesce")
-	def __init__(self, *args, **kwargs):
-		super(ScopeToken, self).__init__(*args, **kwargs)
-		self.corresponding = None # corresponding opening/closing token
-		self.outer = None # for opening tokens, the opening token one level higher
-		self.coalesce = False # for brackets, whether they don't need extra indentation
-		self.blockHead = None # for indents the token at the start of the block
-	end
-end
-
-WHITESPACE = -1
-ESCAPED_NL = -2
-BLOCK_START = -3
-BLOCK_END = -4
-
 def fmt(
 	src,
 	insertEnd,
@@ -65,6 +22,53 @@ def fmt(
 	# (will otherwise not be categorized as implicit block-end-mark when formatting already formatted code)
 
 	implicitBlockEnd = ["elif", "else", "catch", "finally"]
+
+
+	# helpers
+	class Line:
+		__slots__ = ("breakBefore", "tokens", "logicalIndent", "opticalIndent")
+		def __init__(self, breakBefore):
+			self.breakBefore = breakBefore
+			self.tokens = []
+			self.logicalIndent = 0
+			self.opticalIndent = 0
+		end
+		def __repr__(self):
+			return repr(self.tokens)
+		end
+	end
+
+	class Token:
+		__slots__ = ("type", "srcString", "newString", "originalLine", "line")
+		def __init__(self, type, srcString, origLine = None):
+			self.type = type
+			self.srcString = srcString
+			self.newString = srcString
+			self.originalLine = origLine
+			self.line = None
+		end
+		def __repr__(self):
+			return self.srcString
+		end
+	end
+
+	class ScopeToken(Token):
+		__slots__ = ("corresponding", "outer", "blockHead", "coalesce")
+		def __init__(self, *args, **kwargs):
+			super(ScopeToken, self).__init__(*args, **kwargs)
+			self.corresponding = None # corresponding opening/closing token
+			self.outer = None # for opening tokens, the opening token one level higher
+			self.coalesce = False # for brackets, whether they don't need extra indentation
+			self.blockHead = None # for indents the token at the start of the block
+		end
+	end
+
+	WHITESPACE = -1
+	ESCAPED_NL = -2
+	BLOCK_START = -3
+	BLOCK_END = -4
+
+
 
 	# convert to string
 	if type(src) == bytes:
@@ -591,10 +595,8 @@ def fmt(
 	return result
 end
 
-
-if __name__ == "__main__":
+def main_cli():
 	import argparse
-	import sys
 	import pyperclip
 
 	parser = argparse.ArgumentParser(prog = "pyend",
@@ -621,20 +623,20 @@ if __name__ == "__main__":
 			or args.filename is not None and args.clipboard:
 		parser.print_usage()
 		print("error: specify either an input file or --clipboard")
-		sys.exit(2)
+		return 2
 	end
 
 	if args.insert_end and args.ignore_indent:
 		parser.print_usage()
 		print("error: can only insert end marks (-e) if the code is properly indented")
 		print("or ignore indentation (-i) if all blocks have end marks")
-		sys.exit(2)
+		return 2
 	end
 
 	if args.insert_end and args.strip_end:
 		parser.print_usage()
 		print("error: can either insert end marks (-e) or strip end marks (-s)")
-		sys.exit(2)
+		return 2
 	end
 
 	if args.filename is not None:
@@ -674,4 +676,12 @@ if __name__ == "__main__":
 			outFile.write(formatted)
 		end
 	end
+
+	return 0
 end
+
+if __name__ == "__main__":
+	import sys
+	sys.exit(main_cli())
+end
+

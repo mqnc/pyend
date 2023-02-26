@@ -1,2 +1,0 @@
-do diffs with many test files
-use a silent list for tokens that returns None upon out of bounds

@@ -1,5 +1,3 @@
 __pycache__/
 *.py[cod]
-*$py.class
-playground.py
-test.py.formatted.py
+/dist/
