@@ -39,6 +39,10 @@ end
 
 Furthermore, `myList[0:5]` still absolutely counter-intuitively only goes up to `myList[4]` and there is also [this atrocity](https://www.geeksforgeeks.org/least-astonishment-and-the-mutable-default-argument-in-python/).
 
+## What about line breaks?
+
+Line breaks are a [Pandora's box](https://journal.stuffwithstuff.com/2015/09/08/the-hardest-program-ive-ever-written/) that this project is not touching. You have to sprinkle the line breaks in manually, or you use another formatter for that.
+
 ## But in my project I have a variable named `end`. Am I forced to live under van Rossum's dictatorship then?
 
 PyEnd only recognizes an `end` on an otherwise empty line (except for comments) as block end mark. It is a bit ugly as `end` then becomes a reference to your variable but what can we do about it.
