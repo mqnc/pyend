@@ -1,6 +1,6 @@
 # PyEnd
 
-Python's significant indentation is a [horrible](https://www.quora.com/What-are-the-downsides-to-whitespace-indentation-rather-than-requiring-curly-braces) thing that [ruins](https://qr.ae/pr9Pxf) the language for [many](https://news.ycombinator.com/item?id=1463451
+Python's significant [indentation](https://peps.python.org/pep-0666/) is a [horrible](https://www.quora.com/What-are-the-downsides-to-whitespace-indentation-rather-than-requiring-curly-braces) [thing](https://yinwang0.wordpress.com/2011/05/08/layout/) that [ruins](https://qr.ae/pr9Pxf) the [language](https://www.quora.com/Why-do-people-dislike-indented-programming-languages-when-they-indent-their-code-anyway) for [many](https://news.ycombinator.com/item?id=1463451
 ) [people](https://www.linkedin.com/pulse/why-python-indentation-sucks-what-can-done-spoiler-alert-mayank-verma).
 
 It's now fixed.
@@ -23,13 +23,25 @@ Because it is also a formatter. You can convert indentation-based code (both the
 
 This project is still an experiment. Feel free to play around with it and give feedback but don't use it in production code. You may have noticed there are no unit tests yet. Formatting code (especially with significant indentation) is actually not so straight forward and can easily mess things up. That being said, the formatter does some validation in the end where the formatted code is tokenized again and compared to the tokenized input.
 
+## Installation
+
+```
+pip install pyend
+```
+
 ## Hasn't this whole thing been done before?
 
-In contrast to [pindent](https://svn.python.org/projects/python/trunk/Tools/scripts/pindent.py) it works with Python 3 and in contrast to [pybrace](https://github.com/mayank-verma048/PyBrace) and [pybraces](https://timhatch.com/projects/pybraces/), the output is still valid Python code.
+In contrast to [pindent](https://svn.python.org/projects/python/trunk/Tools/scripts/pindent.py), it works with Python 3 and in contrast to [pybrace](https://github.com/mayank-verma048/PyBrace) and [pybraces](https://timhatch.com/projects/pybraces/), the output is still valid Python code.
 
 ## Does it stop there?
 
 It sure does not! It also uses tabs instead of spaces for indentation. Because using tabs instead of spaces is much better. However, if you hold the opinion that your pristine code should look the same everywhere, you can set the `--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces` flag, which will convert indentation tabs into 11 spaces. Should you not like 11 spaces for indentation and you would rather enforce your personal taste onto everyone else, you can set the `--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default` flag to whatever your heart desires.
+
+## Why are tabs better than spaces?
+
+[Developers Who Use Spaces Make More Money Than Those Who Use Tabs](https://stackoverflow.blog/2017/06/15/developers-use-spaces-make-money-use-tabs/). This is obviously because developers who use tabs make better choices in life and are hence happier. To alleviate this inequality, the space invaders need higher monetary compensation.
+
+Furthermore, at the core of the spacecrafters' arguments lies the conviction that their code should look the same everywhere.
 
 ## Does it fix all the bad decisions in Python's language design?
 
