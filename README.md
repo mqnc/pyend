@@ -39,11 +39,21 @@ It sure does not! It also uses tabs instead of spaces for indentation. Because u
 
 ## Why are tabs better than spaces?
 
-[Developers Who Use Spaces Make More Money Than Those Who Use Tabs](https://stackoverflow.blog/2017/06/15/developers-use-spaces-make-money-use-tabs/). This is obviously because developers who use tabs make better choices in life and are hence happier. To alleviate this inequality, the space invaders need higher monetary compensation.
+At the core of the spacecrafters' arguments lies the conviction that their code should look the same everywhere. This idea is just doomed to failure. While a typical space users' code probably looks something like this on their 79 column console or on their printed handouts:
 
-Furthermore, at the core of the spacecrafters' arguments lies the conviction that their code should look the same everywhere.
+![space user code](https://raw.githubusercontent.com/mqnc/pyend/img/your_code.png)
 
-## Does it fix all the bad decisions in Python's language design?
+the exact same code will render like this on my monitor:
+
+![my code](https://raw.githubusercontent.com/mqnc/pyend/img/my_code.png)
+
+so why even bother with indentation width consistency?
+
+Furthermore, [Developers Who Use Spaces Make More Money Than Those Who Use Tabs](https://stackoverflow.blog/2017/06/15/developers-use-spaces-make-money-use-tabs/). This is because developers who use tabs make better life choices and are hence happier. To alleviate this inequality, the space invaders need higher monetary compensation.
+
+That should settle it.
+
+## Does PyEnd fix all the bad decisions in Python's language design?
 
 Unfortunately not. Empty blocks will still need a `pass`:
 
