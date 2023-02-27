@@ -17,11 +17,11 @@ end
 
 ## Why is that useful?
 
-Because it is also a formatter. You can convert indentation-based code (both the file you are working on as well as the clipboard) into keyword-delimited code. You can then paste away and afterwards reformat your file automatically instead of manually. It should also be quite helpful for refactory, when the code structure is changed and everything has to be re-indented.
+Because it is also a formatter. You can convert indentation-based code (both the file you are working on and the clipboard) into keyword-delimited code. You can then paste away and afterwards reformat your file automatically instead of manually. It should also be quite helpful for refactoring, when the code structure changes and everything has to be re-indented.
 
 ## Status
 
-This project is still an experiment. Feel free to play around with it and give feedback but don't use it in production code. You may have noticed there are no unit tests yet. Formatting code (especially with significant indentation) is actually not so straight forward and can easily mess things up. That being said, the formatter does some validation in the end where the formatted code is tokenized again and compared to the tokenized input.
+This project is still an experiment. Feel free to play around with it and give feedback but don't use it in production code. You may have noticed there are no unit tests yet. Formatting code (especially with significant indentation) is actually not so straight forward and can easily mess things up. That being said, the formatter does some validation in the end. The formatted code is tokenized again and compared to the tokenized original input.
 
 ## Installation
 
@@ -31,17 +31,17 @@ pip install pyend
 
 ## Hasn't this whole thing been done before?
 
-In contrast to [pindent](https://svn.python.org/projects/python/trunk/Tools/scripts/pindent.py), it works with Python 3 and in contrast to [pybrace](https://github.com/mayank-verma048/PyBrace) and [pybraces](https://timhatch.com/projects/pybraces/), the output is still valid Python code.
+In contrast to [pindent](https://svn.python.org/projects/python/trunk/Tools/scripts/pindent.py), it works with Python3 and in contrast to [pybrace](https://github.com/mayank-verma048/PyBrace) and [pybraces](https://timhatch.com/projects/pybraces/), the output is still valid Python.
 
 ## Does it stop there?
 
-It sure does not! It also uses tabs instead of spaces for indentation. Because using tabs instead of spaces is much better. However, if you hold the opinion that your pristine code should look the same everywhere, you can set the `--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces` flag, which will convert indentation tabs into 11 spaces. Should you not like 11 spaces for indentation and you would rather enforce your personal taste onto everyone else, you can set the `--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default` flag to whatever your heart desires.
+It sure does not! It also uses tabs instead of spaces for indentation. Because using tabs instead of spaces is much better. However, if you want to be wrong, you can set the `--convert-tabs-to-spaces-despite-tabs-being-objectively-better-than-spaces` flag, which will convert indentation tabs into 11 spaces. Should you not like 11 spaces for indentation and you would rather enforce your personal taste onto everyone else, you can set the `--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default` parameter to whatever your heart desires.
 
 ## Why are tabs better than spaces?
 
-At the core of the spacecrafters' arguments lies the conviction that their code should look the same everywhere. This idea is just doomed to failure. While a typical space users' code probably looks something like this on their 79 column console or on their printed handouts:
+At the core of the spacecrafters' arguments lies the conviction that their pristine code must look the same everywhere. This idea is just doomed to failure. While a typical space users' code probably looks something like this on their 79 column console or on their printed handouts:
 
-![space user code](https://raw.githubusercontent.com/mqnc/pyend/img/your_code.png)
+![space user code](https://raw.githubusercontent.com/mqnc/pyend/img/space_code.png)
 
 the exact same code will render like this on my monitor:
 
@@ -49,7 +49,7 @@ the exact same code will render like this on my monitor:
 
 so why even bother with indentation width consistency?
 
-Furthermore, [Developers Who Use Spaces Make More Money Than Those Who Use Tabs](https://stackoverflow.blog/2017/06/15/developers-use-spaces-make-money-use-tabs/). This is because developers who use tabs make better life choices and are hence happier. To alleviate this inequality, the space invaders need higher monetary compensation.
+Furthermore, [Developers Who Use Spaces Make More Money Than Those Who Use Tabs](https://stackoverflow.blog/2017/06/15/developers-use-spaces-make-money-use-tabs/). This is because space invaders need higher monetary compensation to make up for the fact that developers who use tabs are happier in general because they make better life choices.
 
 That should settle it.
 
@@ -67,7 +67,7 @@ Furthermore, `myList[0:5]` still absolutely counter-intuitively only goes up to 
 
 ## What about line breaks?
 
-Line breaks are a [Pandora's box](https://journal.stuffwithstuff.com/2015/09/08/the-hardest-program-ive-ever-written/) that this project is not touching. You have to sprinkle the line breaks in manually (you're much better at this than any tool anyway), or you use another formatter for that.
+Line breaks are a [Pandora's box](https://journal.stuffwithstuff.com/2015/09/08/the-hardest-program-ive-ever-written/) that this project is not touching. You have to sprinkle the line breaks in manually (you're much better at this than any tool anyway), or you use another formatter on top of PyEnd.
 
 ## But in my project I have a variable named `end`. Am I forced to live under van Rossum's dictatorship then?
 
@@ -79,4 +79,4 @@ Thanks but no. YAML is [screwed up beyond repair](https://en.wikipedia.org/wiki/
 
 ## Disclosure
 
-If I didn't consider Python to be a great language, I wouldn't invest so much time into this project. But significant indentation has been an absolute PITA and the urge to do something about it has been bugging me with every paste. I finally gave in.
+If I didn't consider Python to be a great language, I wouldn't invest so much time in this project. But significant indentation has been an absolute PITA and the urge to do something about it has been bugging me with every paste. I finally gave in.
