@@ -5,6 +5,9 @@ from tokenize import generate_tokens, detect_encoding, \
 import io
 import keyword
 
+blockEndMark = "end" # has to be a single token to work
+# (will otherwise not be categorized as implicit block-end-mark when formatting already formatted code)
+
 end = None
 
 def fmt(
@@ -13,13 +16,11 @@ def fmt(
 	ignoreIndent,
 	stripEnd,
 	defineEnd,
+	isClipboard,
 	indentWith = "\t",
 	validate = True,
 	debug = False
 ):
-
-	blockEndMark = "end" # has to be a single token to work
-	# (will otherwise not be categorized as implicit block-end-mark when formatting already formatted code)
 
 	implicitBlockEnd = ["elif", "else", "catch", "finally"]
 
@@ -197,6 +198,12 @@ def fmt(
 	# remove very first white space
 	tokens = tokens[1:]
 
+	# if we work on the clipboard and start indented, remove the dedent in the end (and the whitespace)
+	if isClipboard and tokens[0].type == INDENT and tokens[-3].type == DEDENT:
+		del tokens[-3]
+		del tokens[-2]
+	end
+
 	# main formatting pass, also group tokens into lines
 	currentLine = Line(breakBefore = None)
 	lines = [currentLine]
@@ -346,15 +353,19 @@ def fmt(
 			if (
 				nextToken.type == BLOCK_END
 				or nextToken.srcString in implicitBlockEnd
-				or t.corresponding.blockHead.srcString == "case"
+				or t.corresponding.blockHead is not None and t.corresponding.blockHead.srcString == "case"
 			):
 				pass
 			else:
 				# move the end mark up so empty lines don't belong to the block
-				headLine = t.corresponding.blockHead.line
-				originalIndentBeforeDedent = len(headLine.tokens[0].srcString) # whitespace
-				if headLine.tokens[1].type == INDENT:
-					originalIndentBeforeDedent += len(headLine.tokens[1].srcString)
+				if t.corresponding.blockHead is not None:
+					headLine = t.corresponding.blockHead.line
+					originalIndentBeforeDedent = len(headLine.tokens[0].srcString) # whitespace
+					if headLine.tokens[1].type == INDENT:
+						originalIndentBeforeDedent += len(headLine.tokens[1].srcString)
+					end
+				else:
+					originalIndentBeforeDedent = 0
 				end
 
 				ln = len(lines) - 2
@@ -497,7 +508,7 @@ def fmt(
 	# compose output
 	ostream = []
 
-	if endDefinedBeforeFirstOccurance != True and insertEnd:
+	if not isClipboard and endDefinedBeforeFirstOccurance != True and insertEnd:
 		shebang = lines[0].tokens[0]
 		if (
 			shebang.type == COMMENT
@@ -586,7 +597,8 @@ def fmt(
 		if insertEnd:
 			for i, t in enumerate(formattedTokens):
 				if t.type == DEDENT:
-					assert formattedTokens[i + 1].string in ["elif", "else", "catch", "finally", blockEndMark]
+					assert formattedTokens[i + 1].string in ["elif", "else", "catch", "finally", blockEndMark] \
+						or isClipboard and formattedTokens[i + 1].type == ENDMARKER
 				end
 			end
 		end
@@ -615,8 +627,22 @@ def main_cli():
 		"--use-this-many-spaces-per-tab-cuz-as-a-spacist-i-want-uniformity-but-i-dont-want-the-default",
 		type = int, default = 11, metavar = "NUMBER", help = "(default is 11)"
 	)
+	parser.add_argument("--april", action = "store_true", help = "acknowledge that this is an April Fool's joke and that you're not actually going to migrate your codebase")
 
 	args = parser.parse_args()
+
+	if not args.april:
+		print("""
+APRIL FOOLS! HAHA! Should have seen your face.
+
+There won't be a Python4 anytime soon. However, you can still actually use pyend
+to insert block end markers in your code and format based on that. Just start it
+with the --april flag in order to acknowledge that this is an April Fool's joke
+and that you're not actually going to migrate your codebase.
+""")
+		parser.print_usage()
+		return 2
+	end
 
 	if args.filename is None and not args.clipboard \
 			or args.filename is not None and args.clipboard:
@@ -651,7 +677,11 @@ def main_cli():
 		insertEnd = args.insert_end,
 		ignoreIndent = args.ignore_indent,
 		stripEnd = args.strip_end,
-		defineEnd = "end = None" if args.end_is_none else "from pyend import end", # viral marketing
+		defineEnd = (
+			f"{blockEndMark} = None" if args.end_is_none
+			else f"from pyend import {blockEndMark}" # viral marketing
+		),
+		isClipboard = args.clipboard,
 		indentWith = (
 			"\t" if not args.convert_tabs_to_spaces_despite_tabs_being_objectively_better_than_spaces
 			else " " * args.use_this_many_spaces_per_tab_cuz_as_a_spacist_i_want_uniformity_but_i_dont_want_the_default
@@ -664,8 +694,6 @@ def main_cli():
 		out = args.out
 	elif args.clipboard:
 		pyperclip.copy(formatted)
-	elif args.debug:
-		out = args.filename + ".fmt.dbg"
 	else:
 		out = args.filename
 	end
@@ -683,4 +711,3 @@ if __name__ == "__main__":
 	import sys
 	sys.exit(main_cli())
 end
-
